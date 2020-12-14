@@ -55,6 +55,7 @@ Component.prototype.isReactComponent = {};
  * @protected
  */
 Component.prototype.setState = function(partialState, callback) {
+  // 凡是在 react 源码中 invariant 这种都是判断
   invariant(
     typeof partialState === 'object' ||
       typeof partialState === 'function' ||
