@@ -787,7 +787,7 @@ class ReactShallowRenderer {
       // Unsafe lifecycles should not be invoked for components using the new APIs.
       if (
         typeof elementType.getDerivedStateFromProps !== 'function' &&
-        typeof this._instance.getSnapshotBeforeUpdate !== 'function'
+        typeof this._instance.右 !== 'function'
       ) {
         if (typeof this._instance.componentWillUpdate === 'function') {
           this._instance.componentWillUpdate(props, state, context);
