@@ -298,6 +298,7 @@ function getStateFromUpdate<State>(
     case UpdateState: {
       const payload = update.payload;
       let partialState;
+      // 判断 payload 是否是函数，即看 setState() 的第一个参数是对象还是函数
       if (typeof payload === 'function') {
         // Updater function
         if (__DEV__) {
@@ -309,12 +310,15 @@ function getStateFromUpdate<State>(
             payload.call(instance, prevState, nextProps);
           }
         }
+        // setState((prevState, nextProps) => { return { times: prevState.times + 1}})
+        // 会执行一次函数
         partialState = payload.call(instance, prevState, nextProps);
         if (__DEV__) {
           exitDisallowedContextReadInDEV();
         }
       } else {
         // Partial state object
+        // 如果 setState 的第一个参数是个对象
         partialState = payload;
       }
       if (partialState === null || partialState === undefined) {
@@ -322,6 +326,7 @@ function getStateFromUpdate<State>(
         return prevState;
       }
       // 这里是 setState 的值是新旧合并的
+      // 从上面逻辑可以看出来，如果 setState 的第一个参数是一个函数，那么会通过 call 去调用一次函数，那么 state 中的结果肯定会有几次 setState 就变动几次；如果是个对象，就算 setState 了多少次，最后都是拿最后一个进行合并
       // Merge the partial state and the previous state.
       return Object.assign({}, prevState, partialState);
     }
