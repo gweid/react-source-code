@@ -321,6 +321,7 @@ function getStateFromUpdate<State>(
         // Null and undefined are treated as no-ops.
         return prevState;
       }
+      // 这里是 setState 的值是新旧合并的
       // Merge the partial state and the previous state.
       return Object.assign({}, prevState, partialState);
     }
@@ -389,6 +390,7 @@ export function processUpdateQueue<State>(
 
     if (first !== null) {
       let update = first;
+      // do...while循环，就是从队列中取出多个 state 进行合并的
       do {
         const updateExpirationTime = update.expirationTime;
         if (updateExpirationTime < renderExpirationTime) {
