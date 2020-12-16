@@ -251,6 +251,7 @@ const classComponentUpdater = {
   },
 };
 
+// 检查是否需要使用 ShouldComponentUpdate
 function checkShouldComponentUpdate(
   workInProgress,
   ctor,
@@ -261,6 +262,7 @@ function checkShouldComponentUpdate(
   nextContext,
 ) {
   const instance = workInProgress.stateNode;
+  // 当组件内部实现了 shouldComponentUpdate
   if (typeof instance.shouldComponentUpdate === 'function') {
     if (__DEV__) {
       if (
@@ -288,10 +290,12 @@ function checkShouldComponentUpdate(
         );
       }
     }
-
+    
+    // 返回 shouldUpdate 是 true 或者 false
     return shouldUpdate;
   }
 
+  // 使用了 PureComponent
   if (ctor.prototype && ctor.prototype.isPureReactComponent) {
     return (
       !shallowEqual(oldProps, newProps) || !shallowEqual(oldState, newState)

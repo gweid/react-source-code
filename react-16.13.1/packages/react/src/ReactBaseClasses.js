@@ -139,6 +139,8 @@ const pureComponentPrototype = (PureComponent.prototype = new ComponentDummy());
 pureComponentPrototype.constructor = PureComponent;
 // Avoid an extra prototype jump for these methods.
 Object.assign(pureComponentPrototype, Component.prototype);
+
+// 为 PureComponent 的原型上添加一个 isPureReactComponent，值为 true；使用了 PureComponent，主要就是标记是否使用shouldComponentUpdate
 pureComponentPrototype.isPureReactComponent = true;
 
 export {Component, PureComponent};
