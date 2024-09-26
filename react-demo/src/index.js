@@ -1,5 +1,5 @@
 // import React from 'react';
-import React from './react'
+import React from './mini-react/react'
 // import ReactDOM from 'react-dom'; // react16.x 版本
 // import ReactDOM from 'react-dom/client'; // react18.x 版本
 
