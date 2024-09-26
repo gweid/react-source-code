@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:classic": "DISABLE_NEW_JSX_TRANSFORM=true react-scripts start",
     "build": "react-scripts build"
   },
   "eslintConfig": {
