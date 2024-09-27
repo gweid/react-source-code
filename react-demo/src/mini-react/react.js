@@ -10,7 +10,7 @@ const createElement = (type, properties, ...args) => {
   //   "type": "div",
   //   "key": null,
   //   "ref": null,
-  //   "props": {
+  //   "props": { 
   //       "children": "react demo"
   //   },
   //   "_owner": null, // 这个与 react 无关的，是 babel 转化带来的
@@ -25,7 +25,11 @@ const createElement = (type, properties, ...args) => {
 
   const { key = null, ref = null,  ...props } = properties
 
-  props.children = args
+  if (args.length === 1) {
+    props.children = args[0]
+  } else {
+    props.children = args
+  }
 
   return {
     $$typeof: REACT_ELEMENT,
