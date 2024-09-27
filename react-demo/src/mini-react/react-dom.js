@@ -9,6 +9,11 @@ import { REACT_ELEMENT } from './constant'
  * 思路：
  *  1、将虚拟 DOM 转换为真实 DOM
  *  2、将真实 DOM 挂载到容器 DOM
+ * 
+ * 注意：
+ *  1、普通标签
+ *  2、函数组件
+ *  3、类组件
  */
 const render = (VNode, containerDom) => {
   // 实际上 render 上会做一些初始化处理，所以进行虚拟 DOM 转换及挂载真实 DOM 的操作放在 mount 函数
@@ -18,7 +23,6 @@ const render = (VNode, containerDom) => {
 const mount = (VNode, containerDom) => {
   // 虚拟 DOM 转换为真实 DOM
   const realDOM = createDOM(VNode)
-
   // 挂载真实 DOM
   realDOM && containerDom.appendChild(realDOM)
 }
@@ -33,6 +37,23 @@ const mount = (VNode, containerDom) => {
  *  3、处理属性值
  */
 const createDOM = (VNode) => {
+  const { $$typeof, type, props } = VNode
+
+  // 如果是一个函数组件
+  // VNode = {
+  //   $$typeof: REACT_ELEMENT,
+  //   "key": null,
+  //   "ref": null,
+  //   "props": {
+  //       "children": []
+  //   },
+  //   type: () => {}
+  // } 
+  if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT) {
+    return getDOMByFuncCom(VNode)
+  }
+
+  // 普通元素标签
   // VNode = {
   //   $$typeof: REACT_ELEMENT,
   //   type: type,
@@ -44,8 +65,6 @@ const createDOM = (VNode) => {
   //     children: []
   //   }
   // }
-  const { $$typeof, type, props } = VNode
-
   // 1、创建元素
   let dom
   if (type && $$typeof === REACT_ELEMENT) {
@@ -73,6 +92,19 @@ const createDOM = (VNode) => {
   // 3、处理属性值
   setPropsForDOM(props, dom)
 
+  return dom
+}
+
+// 处理函数组件
+const getDOMByFuncCom = (VNode) => {
+  const { type, props } = VNode
+  // 执行函数，拿到函数组件的虚拟 DOM 
+  const renderVNode = type && type(props)
+
+  if (!renderVNode) return null
+
+  // 重新走 createDOM 创建元素
+  const dom =  createDOM(renderVNode)
   return dom
 }
 
@@ -127,7 +159,7 @@ const setPropsForDOM = (props = {}, dom) => {
       // 如果是样式 style
       // style = { color: 'red' }
       // <div style="color: red"></div>
-      const styleObj = props[key]
+      const styleObj = props[key] 
       Object.keys(styleObj).forEach(styleName => {
         dom.style[styleName] = styleObj[styleName]
       })
@@ -143,3 +175,4 @@ const ReactDOM = {
 }
 
 export default ReactDOM
+ 

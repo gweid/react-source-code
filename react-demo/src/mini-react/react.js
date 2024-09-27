@@ -5,7 +5,7 @@ import { REACT_ELEMENT } from './constant'
 const createElement = (type, properties, ...args) => {
 
   // 通过在 jsx 文件中 console.log(<div>react demo</div>) 得到的虚拟 DOM 如下：
-  // {
+  // { 
   //   "$$typeof": Symbol(react.element),
   //   "type": "div",
   //   "key": null,
@@ -25,7 +25,7 @@ const createElement = (type, properties, ...args) => {
 
   const { key = null, ref = null,  ...props } = properties
 
-  if (args.length === 1) {
+  if (args.length === 1) { 
     props.children = args[0]
   } else {
     props.children = args
@@ -34,7 +34,7 @@ const createElement = (type, properties, ...args) => {
   return {
     $$typeof: REACT_ELEMENT,
     type: type,
-    key,
+    key, 
     ref,
     props
   }
