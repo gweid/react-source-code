@@ -1,9 +1,9 @@
 // 自定义 React.createElement 函数
+import { Component } from './Component'
 import { REACT_ELEMENT } from './constant'
 
 // React.createElement("div", null, "react demo");
 const createElement = (type, properties, ...args) => {
-
   // 通过在 jsx 文件中 console.log(<div>react demo</div>) 得到的虚拟 DOM 如下：
   // { 
   //   "$$typeof": Symbol(react.element),
@@ -33,7 +33,7 @@ const createElement = (type, properties, ...args) => {
 
   return {
     $$typeof: REACT_ELEMENT,
-    type: type,
+    type,
     key, 
     ref,
     props
@@ -41,7 +41,8 @@ const createElement = (type, properties, ...args) => {
 }
 
 const React = {
-  createElement
+  createElement,
+  Component
 }
 
 export default React

@@ -31,6 +31,11 @@ const mount = (VNode, containerDom) => {
  * createDOM
  * @param {*} VNode 虚拟 DOM
  * 
+ * 处理：
+ *  1、类组件
+ *  2、函数组件
+ *  3、普通标签
+ * 
  * 思路：
  *  1、根据 type 创建元素
  *  2、处理子元素
@@ -39,16 +44,12 @@ const mount = (VNode, containerDom) => {
 const createDOM = (VNode) => {
   const { $$typeof, type, props } = VNode
 
+  // 如果是类组件
+  if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT && type.IS_CLASS_COMPONENT) {
+    return getDOMByClassCom(VNode)
+  }
+
   // 如果是一个函数组件
-  // VNode = {
-  //   $$typeof: REACT_ELEMENT,
-  //   "key": null,
-  //   "ref": null,
-  //   "props": {
-  //       "children": []
-  //   },
-  //   type: () => {}
-  // } 
   if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT) {
     return getDOMByFuncCom(VNode)
   }
@@ -97,9 +98,44 @@ const createDOM = (VNode) => {
 
 // 处理函数组件
 const getDOMByFuncCom = (VNode) => {
+  // VNode = {
+  //   $$typeof: REACT_ELEMENT,
+  //   key: null,
+  //   ref: null,
+  //   props: {
+  //       children: []
+  //   },
+  //   type: () => {}
+  // }
+
   const { type, props } = VNode
   // 执行函数，拿到函数组件的虚拟 DOM 
   const renderVNode = type && type(props)
+
+  if (!renderVNode) return null
+
+  // 重新走 createDOM 创建元素
+  const dom =  createDOM(renderVNode)
+  return dom
+}
+
+// 处理类组件
+const getDOMByClassCom = (VNode) => {
+  // VNode = {
+  //   key: null,
+  //   ref: null,
+  //   props: {
+  //       name: "my-func-com",
+  //       children: []
+  //   },
+  //   type: class MyClassCom
+  // }
+
+  const { type, props } = VNode
+
+  // 类组件，需要 new 创建示例，然后执行 render 函数得到虚拟 DOM 
+  const classCom = type && new type(props)
+  const renderVNode = classCom && classCom.render && classCom.render()
 
   if (!renderVNode) return null
 

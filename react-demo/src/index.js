@@ -16,13 +16,26 @@ import ReactDOM from './mini-react/react-dom';
 const root = document.getElementById('root');
 
 // ReactDOM.render(<div key="once" ref="divBox" style={{color: '#333' }}><div><span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>子节点</div>react demo</div>, root);
+// console.log(<div key="once" ref="divBox" style={{color: '#333' }}><div><span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>子节点</div>react demo</div>);
 
-const MyFuncCom = (props) => {
-  return (
-    <div key="once" ref="divBox" style={{color: '#333' }}><div><span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>子节点</div>react demo</div>
-  )
-}
+// const MyFuncCom = (props) => {
+//   return (
+//     <div key="once" ref="divBox" style={{color: '#333' }}><div><span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>子节点</div>react demo</div>
+//   )
+// };
+// ReactDOM.render(<MyFuncCom name='my-func-com' />, root);
+// console.log(<MyFuncCom name='my-func-com' />);
 
-ReactDOM.render(<MyFuncCom name='my-func-com' />, root);
- 
-console.log(<MyFuncCom name='my-func-com' />);
+class MyClassCom extends React.Component {
+  constructor(props) {
+    super(props)
+  }
+
+  render() {
+    return (
+      <div key="once" ref="divBox" style={{color: '#333' }}><div><span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>子节点</div>{this.props.name}</div>
+    )
+  }
+};
+ReactDOM.render(<MyClassCom name='my-func-com' />, root);
+console.log(<MyClassCom name='my-func-com' />);
