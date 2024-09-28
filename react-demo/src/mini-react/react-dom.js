@@ -93,6 +93,9 @@ const createDOM = (VNode) => {
   // 3、处理属性值
   setPropsForDOM(props, dom)
 
+  // 将 DOM 保存到 VNode 上，在更新操作的时候，用于比较
+  VNode.dom = dom
+ 
   return dom
 }
 
@@ -120,7 +123,7 @@ const getDOMByFuncCom = (VNode) => {
 }
 
 // 处理类组件
-const getDOMByClassCom = (VNode) => {
+const  getDOMByClassCom = (VNode) => {
   // VNode = {
   //   key: null,
   //   ref: null,
@@ -136,6 +139,16 @@ const getDOMByClassCom = (VNode) => {
   // 类组件，需要 new 创建示例，然后执行 render 函数得到虚拟 DOM 
   const classComInstance = type && new type(props)
   const renderVNode = classComInstance.render && classComInstance.render()
+
+  // 将这个 renderVNode 挂载到类组件实例，为了后面更新时，与新的 VNode 进行比较 
+  classComInstance.oldVNode = renderVNode
+
+  // 调试代码：3 秒后调用 setState 改变值，触发更新
+  // setTimeout(() => {
+  //   classComInstance.setState({
+  //     age: 999
+  //   })
+  // }, 3000)
 
   if (!renderVNode) return null
 
@@ -162,16 +175,16 @@ const mountArray = (VNode, parent) => {
 }
 
 const createDOMTool = (VNode, eleDom) => {
-  if (isType(VNode) === 'String') {
-    // 子节点是文本节点
-    const textNode = document.createTextNode(VNode)
-    eleDom.appendChild(textNode)
-  } else if (isType(VNode) === 'Object' && VNode.type) {
+  if (isType(VNode) === 'Object' && VNode.type) {
     // 子节点是对象
     mount(VNode, eleDom)
   } else if (isType(VNode) === 'Array') {
     // 子节点是数组
     mountArray(VNode, eleDom)
+  } else {
+    // 子节点是文本节点
+    const textNode = document.createTextNode(VNode)
+    eleDom.appendChild(textNode)
   }
 }
 
@@ -203,6 +216,21 @@ const setPropsForDOM = (props = {}, dom) => {
       dom[key] = props[key]
     }
   }
+}
+
+export const findDOMByVNode = (VNode) => {
+  if (!VNode) return
+  if (VNode.dom) return VNode.dom
+}
+
+export const updateDomTree = (oldDOM, newVNode) => {
+  const parentNode = oldDOM.parentNode
+
+  // 先删除旧 DOM。TODO: diff 过程先省略
+  parentNode.removeChild(oldDOM)
+
+  const newDOM = createDOM(newVNode)
+  parentNode.appendChild(newDOM)
 }
 
 

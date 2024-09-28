@@ -34,11 +34,21 @@ const root = document.getElementById('root');
 class MyClassCom extends React.Component {
   constructor(props) {
     super(props)
+    this.state = {
+      age: 18
+    }
   }
 
   render() {
     return (
-      <div key="once" ref="divBox" style={{color: '#333' }}><div><span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>子节点</div>{this.props.name}</div>
+      <div key="once" ref="divBox" style={{color: '#333' }}>
+        <div>
+          <span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>
+          子节点
+        </div>
+        <div>年龄：{this.state.age}</div>
+        {this.props.name}
+      </div>
     )
   }
 };
