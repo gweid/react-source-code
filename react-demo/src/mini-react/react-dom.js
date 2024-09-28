@@ -43,8 +43,8 @@ const mount = (VNode, containerDom) => {
  */
 const createDOM = (VNode) => {
   const { $$typeof, type, props } = VNode
-
-  // 如果是类组件
+ 
+  // 如果是类组件：根据 type.IS_CLASS_COMPONENT 区分类组件，IS_CLASS_COMPONENT 定义在 Component 中
   if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT && type.IS_CLASS_COMPONENT) {
     return getDOMByClassCom(VNode)
   }
@@ -116,7 +116,7 @@ const getDOMByFuncCom = (VNode) => {
 
   // 重新走 createDOM 创建元素
   const dom =  createDOM(renderVNode)
-  return dom
+  return dom 
 }
 
 // 处理类组件
@@ -134,8 +134,8 @@ const getDOMByClassCom = (VNode) => {
   const { type, props } = VNode
 
   // 类组件，需要 new 创建示例，然后执行 render 函数得到虚拟 DOM 
-  const classCom = type && new type(props)
-  const renderVNode = classCom && classCom.render && classCom.render()
+  const classComInstance = type && new type(props)
+  const renderVNode = classComInstance.render && classComInstance.render()
 
   if (!renderVNode) return null
 
