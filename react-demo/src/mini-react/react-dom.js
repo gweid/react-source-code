@@ -182,7 +182,7 @@ const createDOMTool = (VNode, eleDom) => {
     // 子节点是数组
     mountArray(VNode, eleDom)
   } else {
-    // 子节点是文本节点
+    // 子节点是文本节点。TODO：默认了其它都是文本节点，实际上要处理 null、undefined 等情况
     const textNode = document.createTextNode(VNode)
     eleDom.appendChild(textNode)
   }
