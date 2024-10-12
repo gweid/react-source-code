@@ -24,7 +24,7 @@ export const flushUpdateQueue = () => {
 }
 
 class Updater {
-  constructor(ClassComInstance) {  
+  constructor(ClassComInstance) {
     this.ClassComInstance = ClassComInstance
 
     // setState 可能执行多次，需要保存执行多次后的 state，一次更新
@@ -49,7 +49,7 @@ class Updater {
   // 合并 state 操作
   launchUpdate() {
     const { ClassComInstance, pendingState } = this
-    if (pendingState.length === 0) return 
+    if (pendingState.length === 0) return
 
     // 合并 state
     ClassComInstance.state = pendingState.reduce((preState, newState) => {
@@ -74,7 +74,7 @@ export class Component {
 
   }
 
-  setState(partialState) { 
+  setState(partialState) {
     // 1、合并属性 
     // this.state = { ...this.state, ...partialState }
     // 使用另外一个类来管理 update 

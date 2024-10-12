@@ -25,7 +25,7 @@ const createElement = (type, properties, ...args) => {
 
   const { key = null, ref = null,  ...props } = properties
 
-  if (args.length === 1) { 
+  if (args.length === 1) {
     props.children = args[0]
   } else {
     props.children = args
