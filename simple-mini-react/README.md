@@ -2,6 +2,7 @@
 
 目录结构
 
+```
 simple-mini-react
 ├── src
 │   ├── mini-react
@@ -13,3 +14,4 @@ simple-mini-react
 │   │   └── utils.js          // 辅助工具函数
 │   └── index.js              // mini-react 使用入口
 └── readme.md
+```
