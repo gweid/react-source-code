@@ -35,8 +35,22 @@ class MyClassCom extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      age: 18
+      age: 18,
+      count: 0
     }
+  }
+
+  handleParentClick() {
+    console.log('点击冒泡到父元素');
+  }
+
+  handleClick(e) {
+    // 阻止冒泡
+    e.stopPropagation()
+
+    this.setState({
+      count: this.state.count + 1
+    })
   }
 
   render() {
@@ -47,6 +61,10 @@ class MyClassCom extends React.Component {
           子节点
         </div>
         <div>年龄：{this.state.age}</div>
+        <div>计数器：{this.state.count}</div>
+        <div onClick={this.handleParentClick}>
+          <button onClick={(e) => this.handleClick(e)}>点击事件，计数器++</button>
+        </div>
         {this.props.name}
       </div>
     )

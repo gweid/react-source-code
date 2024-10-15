@@ -1,4 +1,5 @@
 import { isType } from './utils'
+import {addEvent} from './events'
 import { REACT_ELEMENT } from './constant'
 
 /**
@@ -93,7 +94,7 @@ const createDOM = (VNode) => {
   // 3、处理属性值
   setPropsForDOM(props, dom)
 
-  // 将 DOM 保存到 VNode 上，在更新操作的时候，用于比较
+  // 将 DOM 保存到 VNode 上，在更新操作的时候，用 于比较
   VNode.dom = dom
  
   return dom
@@ -203,7 +204,7 @@ const setPropsForDOM = (props = {}, dom) => {
 
     if (/^on[A-Z].*/.test(key)) {
       // 如果是事件
-
+      addEvent(dom, key.toLocaleLowerCase(), props[key])
     } else if (key === 'style') {
       // 如果是样式 style
       // style = { color: 'red' }
