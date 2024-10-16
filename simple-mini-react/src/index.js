@@ -34,10 +34,14 @@ const root = document.getElementById('root');
 class MyClassCom extends React.Component {
   constructor(props) {
     super(props)
+
     this.state = {
       age: 18,
       count: 0
     }
+
+    this.divRef = React.createRef()
+    this.compRef = React.createRef()
   }
 
   handleParentClick() {
@@ -53,9 +57,17 @@ class MyClassCom extends React.Component {
     })
   }
 
+  handleDivRefClick() {
+    console.log(this.divRef.current.innerText)
+  }
+
+  handleCompRefClick() {
+    this.compRef.current.handleAdd(10)
+  }
+
   render() {
     return (
-      <div key="once" ref="divBox" style={{color: '#333' }}>
+      <div key="once" style={{color: '#333' }}>
         <div>
           <span style={{color: 'red', fontSize: '20px' }}>哈哈哈</span>
           子节点
@@ -65,10 +77,42 @@ class MyClassCom extends React.Component {
         <div onClick={this.handleParentClick}>
           <button onClick={(e) => this.handleClick(e)}>点击事件，计数器++</button>
         </div>
-        {this.props.name}
+        <div>
+          <h1>------- ref -------</h1>
+          <div ref={this.divRef} onClick={() => this.handleDivRefClick()}>普通标签ref</div>
+
+          <button onClick={() => this. handleCompRefClick()}>子组件的ref</button>
+          <RefComp ref={this.compRef} />
+        </div>
       </div>
     )
   }
 };
+
+class RefComp extends React.Component {
+  constructor(props) {
+    super(props)
+
+    this.state = {
+      num: 0
+    }
+  }
+
+  handleAdd(num) {
+    this.setState({
+      num: this.state.num + num
+    })
+  }
+
+  render() {
+    return (
+      <div>
+        <p>数值：{this.state.num}</p>
+        <button onClick={() => this.handleAdd(1)}>+1</button>
+      </div>
+    )
+  }
+}
+
 ReactDOM.render(<MyClassCom name='my-func-com' />, root);
 console.log(<MyClassCom name='my-func-com' />);

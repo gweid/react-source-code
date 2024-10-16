@@ -40,9 +40,17 @@ const createElement = (type, properties, ...args) => {
   }
 }
 
+// 创建 ref
+const createRef = (currentValue = null) => {
+  return {
+    current: currentValue
+  }
+}
+
 const React = {
   createElement,
-  Component
+  Component,
+  createRef
 }
 
 export default React

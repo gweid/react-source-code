@@ -41,9 +41,9 @@ const mount = (VNode, containerDom) => {
  *  1、根据 type 创建元素
  *  2、处理子元素
  *  3、处理属性值
- */
+ */ 
 const createDOM = (VNode) => {
-  const { $$typeof, type, props } = VNode
+  const { $$typeof, type, props, ref } = VNode
  
   // 如果是类组件：根据 type.IS_CLASS_COMPONENT 区分类组件，IS_CLASS_COMPONENT 定义在 Component 中
   if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT && type.IS_CLASS_COMPONENT) {
@@ -94,6 +94,9 @@ const createDOM = (VNode) => {
   // 3、处理属性值
   setPropsForDOM(props, dom)
 
+  // 处理 ref，将当前 dom 传递给 ref.current
+  ref && (ref.current = dom)
+
   // 将 DOM 保存到 VNode 上，在更新操作的时候，用 于比较
   VNode.dom = dom
  
@@ -119,7 +122,7 @@ const getDOMByFuncCom = (VNode) => {
   if (!renderVNode) return null
 
   // 重新走 createDOM 创建元素
-  const dom =  createDOM(renderVNode)
+  const dom = createDOM(renderVNode)
   return dom 
 }
 
@@ -135,7 +138,7 @@ const  getDOMByClassCom = (VNode) => {
   //   type: class MyClassCom
   // }
 
-  const { type, props } = VNode
+  const { type, props, ref } = VNode
 
   // 类组件，需要 new 创建示例，然后执行 render 函数得到虚拟 DOM 
   const classComInstance = type && new type(props)
@@ -154,7 +157,11 @@ const  getDOMByClassCom = (VNode) => {
   if (!renderVNode) return null
 
   // 重新走 createDOM 创建元素
-  const dom =  createDOM(renderVNode)
+  const dom = createDOM(renderVNode)
+
+  // 处理 ref，注意这里，类组件的 ref current 是当前类实例
+  ref && (ref.current = classComInstance)
+
   return dom
 }
 
