@@ -10,7 +10,7 @@
 simple-mini-react
 ├── src
 │   ├── mini-react
-│   │   ├── Component.js      // 类组件
+│   │   ├── Component.js      // 类组件（类组件的 setState、更新、批量更新等）
 │   │   ├── constant.js       // 常量
 │   │   ├── events.js         // 事件系统
 │   │   ├── react-dom.js      // render 函数，渲染真实 dom
