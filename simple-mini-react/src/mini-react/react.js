@@ -1,6 +1,6 @@
 // 自定义 React.createElement 函数
 import { Component } from './Component'
-import { REACT_ELEMENT } from './constant'
+import { REACT_ELEMENT, REACT_FORWARD_REF } from './constant'
 
 // React.createElement("div", null, "react demo");
 const createElement = (type, properties, ...args) => {
@@ -47,10 +47,19 @@ const createRef = (currentValue = null) => {
   }
 }
 
+// 实现 forwardRef
+const forwardRef = (render) => {
+  return {
+    $$typeof: REACT_FORWARD_REF,
+    render
+  }
+} 
+
 const React = {
   createElement,
   Component,
-  createRef
+  createRef,
+  forwardRef
 }
 
 export default React

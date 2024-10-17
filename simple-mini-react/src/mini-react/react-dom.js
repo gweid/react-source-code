@@ -1,6 +1,6 @@
 import { isType } from './utils'
 import {addEvent} from './events'
-import { REACT_ELEMENT } from './constant'
+import { REACT_ELEMENT, REACT_FORWARD_REF } from './constant'
 
 /**
  * ReactDOM.render 函数
@@ -44,7 +44,12 @@ const mount = (VNode, containerDom) => {
  */ 
 const createDOM = (VNode) => {
   const { $$typeof, type, props, ref } = VNode
- 
+
+  // 如果是 forwardRef 包裹的函数组件
+  if(type && type.$$typeof === REACT_FORWARD_REF) {
+    return getDOMByForwardRef(VNode)
+  }
+
   // 如果是类组件：根据 type.IS_CLASS_COMPONENT 区分类组件，IS_CLASS_COMPONENT 定义在 Component 中
   if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT && type.IS_CLASS_COMPONENT) {
     return getDOMByClassCom(VNode)
@@ -103,6 +108,21 @@ const createDOM = (VNode) => {
   return dom
 }
 
+// 处理 forwardRef 包裹的函数组件
+const getDOMByForwardRef = (VNode) => {
+  const { type, props, ref } = VNode
+ 
+  // forwordRef(FuncComp)
+  // const FuncComp = (props, ref) => (<div>函数组件</div>)
+  // 包裹在 forwordRef 的函数组件，多一个 ref 属性
+  const renderVNode = type.render && type.render(props, ref)
+
+  if (!renderVNode) return null
+
+  const dom = createDOM(renderVNode)
+  return dom
+} 
+
 // 处理函数组件
 const getDOMByFuncCom = (VNode) => {
   // VNode = {
@@ -123,7 +143,7 @@ const getDOMByFuncCom = (VNode) => {
 
   // 重新走 createDOM 创建元素
   const dom = createDOM(renderVNode)
-  return dom 
+  return dom
 }
 
 // 处理类组件

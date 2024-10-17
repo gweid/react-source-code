@@ -42,6 +42,7 @@ class MyClassCom extends React.Component {
 
     this.divRef = React.createRef()
     this.compRef = React.createRef()
+    this.funcCompRef = React.createRef()
   }
 
   handleParentClick() {
@@ -79,10 +80,11 @@ class MyClassCom extends React.Component {
         </div>
         <div>
           <h1>------- ref -------</h1>
-          <div ref={this.divRef} onClick={() => this.handleDivRefClick()}>普通标签ref</div>
+          <div ref={this.divRef} onCli ck={() => this.handleDivRefClick()}>普通标签ref</div>
 
-          <button onClick={() => this. handleCompRefClick()}>子组件的ref</button>
+          <button onClick={() => this.handleCompRefClick()}>组件的ref</button>
           <RefComp ref={this.compRef} />
+          <FuncCompRef ref={this.funcCompRef} />
         </div>
       </div>
     )
@@ -113,6 +115,15 @@ class RefComp extends React.Component {
     )
   }
 }
+
+const FuncComp = () => {
+  return (
+    <div>函数组件forwordRef</div>
+  )
+}
+
+const FuncCompRef = React.forwardRef(FuncComp)
+console.log(FuncCompRef);
 
 ReactDOM.render(<MyClassCom name='my-func-com' />, root);
 console.log(<MyClassCom name='my-func-com' />);
