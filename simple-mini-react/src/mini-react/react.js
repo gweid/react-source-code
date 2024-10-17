@@ -17,7 +17,7 @@ const createElement = (type, properties, ...args) => {
   //   "_store": {} // 这个与 react 无关的，是 babel 转化带来的
   // }
 
-  // 先删除不是 react 本身的无用属性
+  // 先删除不是 react 本身的无用属性，这两个属性是 babel 编译 jsx 带上的
   const filterKey = ['_owner', '_store']
   filterKey.forEach(key => {
     delete properties[key]
