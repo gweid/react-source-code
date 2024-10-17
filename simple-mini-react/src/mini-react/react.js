@@ -23,7 +23,7 @@ const createElement = (type, properties, ...args) => {
     delete properties[key]
   })
 
-  const { key = null, ref = null,  ...props } = properties
+  const { key = null, ref = null, ...props } = properties
 
   if (args.length === 1) {
     props.children = args[0]
@@ -34,7 +34,7 @@ const createElement = (type, properties, ...args) => {
   return {
     $$typeof: REACT_ELEMENT,
     type,
-    key, 
+    key,
     ref,
     props
   }
@@ -53,7 +53,7 @@ const forwardRef = (render) => {
     $$typeof: REACT_FORWARD_REF,
     render
   }
-} 
+}
 
 const React = {
   createElement,
