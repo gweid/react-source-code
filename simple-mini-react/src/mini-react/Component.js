@@ -90,6 +90,7 @@ export class Component {
     // 2、根据新的虚拟 DOM 生成真实 DOM
     // 3、将真实 DOM 挂载到页面上
 
+    // oldVNode 在 react-dom 中处理类组件的时候会挂载
     const oldVNode = this.oldVNode
     const oldDOM = findDOMByVNode(oldVNode)
 
