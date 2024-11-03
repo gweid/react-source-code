@@ -1,5 +1,6 @@
 // 自定义 React.createElement 函数
 import { Component } from './Component'
+import { toVNode } from './utils'
 import { REACT_ELEMENT, REACT_FORWARD_REF } from './constant'
 
 // React.createElement("div", null, "react demo");
@@ -25,10 +26,11 @@ const createElement = (type, properties, ...args) => {
 
   const { key = null, ref = null, ...props } = properties
 
+  // toVNode 作用: 将文本节点 转换为对象的形式，便于统一操作
   if (args.length === 1) {
-    props.children = args[0]
+    props.children = toVNode(args[0])
   } else {
-    props.children = args
+    props.children = args.map(toVNode)
   }
 
   return {

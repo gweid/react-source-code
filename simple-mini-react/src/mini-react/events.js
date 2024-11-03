@@ -14,7 +14,7 @@ export const addEvent = (dom, eventName, eventFunc) => {
 const dispatchEvent = (nativeEvent) => {
   // nativeEvent 的值就是事件对象，比如点击事件，nativeEvent 就是当前点击的各种值，比如位置等
   // 可以通过: document.onclick = function(event) { console.log(event) } 查看下这个事件对象
-  updateQueue.isBatch = true 
+  updateQueue.isBatch = true
 
   // 事件合成机制的核心二：屏蔽浏览器之间的差异
   const syntheticEvent = createSyntheticEvent(nativeEvent)
@@ -44,7 +44,7 @@ const createSyntheticEvent = (nativeEvent) => {
   const nativeEventKeyVaule = {}
   for (let key in nativeEvent) {
     nativeEventKeyVaule[key] = isType(nativeEvent[key]) === 'Function'
-      ? nativeEvent[key].bind( ) // 如果事件属性是函数，绑定上下文为原来的 nativeEvent
+      ? nativeEvent[key].bind(nativeEvent) // 如果事件属性是函数，绑定上下文为原来的 nativeEvent
       : nativeEvent[key]
   }
 

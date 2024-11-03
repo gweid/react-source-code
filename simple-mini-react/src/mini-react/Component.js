@@ -71,7 +71,6 @@ export class Component {
     this.updater = new Updater(this)
     this.props = props
     this.state = {}
-
   }
 
   setState(partialState) {
@@ -95,7 +94,7 @@ export class Component {
     const oldDOM = findDOMByVNode(oldVNode)
 
     const newVNode = this.render()
-    updateDomTree(oldDOM, newVNode) // 更新 DOM 树
+    updateDomTree(oldVNode, newVNode, oldDOM) // 更新 DOM 树
 
     this.oldVNode = newVNode
   }
