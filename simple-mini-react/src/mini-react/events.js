@@ -1,4 +1,4 @@
-import { isType } from './utils'
+import { isTypeOf } from './utils'
 import { updateQueue, flushUpdateQueue } from './Component'
 
 export const addEvent = (dom, eventName, eventFunc) => {
@@ -12,26 +12,31 @@ export const addEvent = (dom, eventName, eventFunc) => {
 }
 
 const dispatchEvent = (nativeEvent) => {
-  // nativeEvent 的值就是事件对象，比如点击事件，nativeEvent 就是当前点击的各种值，比如位置等
+  // console.log(nativeEvent);
+  // nativeEvent 的值就是事件对象，比如点击事件，nativeEvent 就是当前元素点击的各种值，比如位置等
   // 可以通过: document.onclick = function(event) { console.log(event) } 查看下这个事件对象
+ 
   updateQueue.isBatch = true
 
   // 事件合成机制的核心二：屏蔽浏览器之间的差异
   const syntheticEvent = createSyntheticEvent(nativeEvent)
 
-  // 触发事件，并且处理事件冒泡: 如果点击了子元素，那么要查看一层一层往外查看所有父辈元素有没有绑定点击事件
+  // 这个 target 是触发事件的那个元素，就是事件源
   let target = nativeEvent.target
+  // 触发事件，并且处理事件冒泡: 可能事件源和他的父节点都绑定了点击事件，所以一层层往外查看所有父节点有没有绑定点击事件
+  // 绑定的事件挂载在：target.attach 上
   while(target) {
     syntheticEvent.currentTarget = target
-    const eventName = `on${nativeEvent.type}`
-    // 这里能拿到 attach 对象，是因为上面 addEvent 挂载了
+    const eventName = `on${nativeEvent.type}` 
+    // 这里能拿到 attach 对象，是因 为上面 addEvent 挂载了
     const eventFunc = target.attach && target.attach[eventName]
-    // 这样就将合成事件对象传递到了源事件中
+    // 将合成事件对象传递到源事件中
     eventFunc && eventFunc(syntheticEvent)
 
     // 如果阻止冒泡了，退出循环
     if (syntheticEvent.isPropagationStopped) break
 
+    // 向上找父节点，只要有父节点，就会一直循环
     target = target.parentNode
   }
 
@@ -43,7 +48,7 @@ const createSyntheticEvent = (nativeEvent) => {
   // 因为 react 的事件对象都是自定义的，所以这里将源事件对象进行拷贝一份，再加自定义属性
   const nativeEventKeyVaule = {}
   for (let key in nativeEvent) {
-    nativeEventKeyVaule[key] = isType(nativeEvent[key]) === 'Function'
+    nativeEventKeyVaule[key] = isTypeOf(nativeEvent[key], 'Function')
       ? nativeEvent[key].bind(nativeEvent) // 如果事件属性是函数，绑定上下文为原来的 nativeEvent
       : nativeEvent[key]
   }
@@ -51,10 +56,10 @@ const createSyntheticEvent = (nativeEvent) => {
   // 为合成事件对象扩展阻止默认事件和阻止事件冒泡
   const syntheticEvent = Object.assign(nativeEventKeyVaule, {
     nativeEvent, // 将原始的事件对象也保存起来
-    isDefaultPrevented: false, // 默认事件
-    isPropagationStopped: false, // 事件冒泡
-    preventDefault() { 
-      // 注意，这里的 this 指向当前 syntheticEvent 这个对象 
+    isDefaultPrevented: false, // 是否阻止默认事件
+    isPropagationStopped: false, // 是否阻止事件冒泡
+    preventDefault() {
+      // 注意，这里的 this 指向当前 syntheticEvent 这个对象
       this.isDefaultPrevented = true
 
       // 处理不同浏览器事件兼容
@@ -75,7 +80,7 @@ const createSyntheticEvent = (nativeEvent) => {
         // IE 浏览器
         this.nativeEvent.cancelBubble = false
       }
-    }
+    } 
   })
 
   return syntheticEvent

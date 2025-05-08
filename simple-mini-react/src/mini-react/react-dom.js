@@ -1,13 +1,27 @@
-import { isType } from './utils'
+import { isTypeOf } from './utils'
 import { addEvent } from './events'
 import { REACT_ELEMENT, REACT_FORWARD_REF, REACT_TEXT, REACT_DIFF_CREATE, REACT_DIFF_MOVE } from './constant'
 
 /**
  * ReactDOM.render 函数
  * @param {*} VNode 虚拟 DOM
- * @param {*} containerDom 挂载的容器 DOM
+ * @param {*} containerDOM 挂载的容器 DOM
  * 
- * 思路：
+ * 主要做初始化渲染
+ * 真正将虚拟 DOM 转换为真实 DOM 并挂载到页面上是 mount 函数
+ */
+const render = (VNode, containerDOM) => {
+  // 实际上 render 上会做一些初始化处理，所以进行虚拟 DOM 转换及挂载真实 DOM 的操作放在 mount 函数
+  // 初始化渲染的操作（省略...）
+  mount(VNode, containerDOM)
+}
+
+/**
+ * mount: 挂载
+ * @param {*} VNode 虚拟 DOM 
+ * @param {*} containerDOM 挂载的容器 DOM 
+ * 
+ *  * 流程：
  *  1、将虚拟 DOM 转换为真实 DOM
  *  2、将真实 DOM 挂载到容器 DOM
  * 
@@ -16,16 +30,11 @@ import { REACT_ELEMENT, REACT_FORWARD_REF, REACT_TEXT, REACT_DIFF_CREATE, REACT_
  *  2、函数组件
  *  3、类组件
  */
-const render = (VNode, containerDom) => {
-  // 实际上 render 上会做一些初始化处理，所以进行虚拟 DOM 转换及挂载真实 DOM 的操作放在 mount 函数
-  mount(VNode, containerDom)
-}
-
-const mount = (VNode, containerDom) => {
+const mount = (VNode, containerDOM) => {
   // 虚拟 DOM 转换为真实 DOM
   const realDOM = createDOM(VNode)
   // 挂载真实 DOM
-  realDOM && containerDom.appendChild(realDOM)
+  realDOM && containerDOM.appendChild(realDOM)
 }
 
 /**
@@ -37,7 +46,7 @@ const mount = (VNode, containerDom) => {
  *  2、函数组件
  *  3、普通标签
  * 
- * 思路：
+ * 流程：
  *  1、根据 type 创建元素
  *  2、处理子元素
  *  3、处理属性值
@@ -46,17 +55,18 @@ const createDOM = (VNode) => {
   const { $$typeof, type, props, ref } = VNode
 
   // 如果是 forwardRef 包裹的函数组件
+  // 注意这里是 type 中的 $$typeof，与 VNode 中的 $$typeof 是不一样的
   if(type && type.$$typeof === REACT_FORWARD_REF) {
     return getDOMByForwardRef(VNode)
   }
 
   // 如果是类组件：根据 type.IS_CLASS_COMPONENT 区分类组件，IS_CLASS_COMPONENT 定义在 Component 中
-  if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT && type.IS_CLASS_COMPONENT) {
+  if(isTypeOf(type, 'Function') &&  $$typeof === REACT_ELEMENT && type.IS_CLASS_COMPONENT) {
     return getDOMByClassCom(VNode)
   }
 
   // 如果是一个函数组件
-  if(isType(type) === 'Function' && $$typeof === REACT_ELEMENT) {
+  if(isTypeOf(type, 'Function') && $$typeof === REACT_ELEMENT) {
     return getDOMByFuncCom(VNode)
   }
 
@@ -72,9 +82,10 @@ const createDOM = (VNode) => {
   //     children: []
   //   }
   // }
-  // 1、创建元素
+  // 1、创建元素 
   let dom
   if (type === REACT_TEXT) {
+    // 如果是文本节点
     dom = document.createTextNode(props.text)
   } else if (type && $$typeof === REACT_ELEMENT) {
     dom = document.createElement(type)
@@ -84,14 +95,14 @@ const createDOM = (VNode) => {
   if (props) {
     const { children } = props
 
-    if (isType(children) === 'Object' && children.type) {
+    if (isTypeOf(children, 'Object') && children.type) {
       // 子节点是对象
       mount(children, dom)
-    } else if (isType(children) === 'Array') {
+    } else if (isTypeOf(children, 'Array')) {
       // 子节点是数组
       mountArray(children, dom)
     }
-  }
+  } 
 
   // 3、处理属性值
   setPropsForDOM(props, dom)
@@ -99,10 +110,49 @@ const createDOM = (VNode) => {
   // 处理 ref，将当前 dom 传递给 ref.current
   ref && (ref.current = dom)
 
-  // 将 DOM 保存到 VNode 上，在更新操作的时候，用 于比较
+  // 将 DOM 保存到 VNode 上，在更新操作的时候，用于比较
   VNode.dom = dom
 
   return dom
+}
+
+const mountArray = (VNode, parent) => {
+  if (!isTypeOf(VNode, 'Array')) return;
+  VNode.forEach((child, index) => {
+    // 这个在 updateChildren 中进行 diff 的时候会用到
+    child && (child.index = index)
+    mount(child, parent)
+  })
+}
+
+// 设置属性
+const setPropsForDOM = (props = {}, dom) => {
+  if (!dom) return
+
+  // props: {
+  //   children: [],
+  //   style: {}, 
+  //   onClick: () => {}
+  // }
+  for (let key in props) {
+    // 如果是 children，已经处理过，跳过
+    if (key === 'children') continue
+
+    if (/^on[A-Z].*/.test(key)) {
+      // 如果是事件
+      addEvent(dom, key.toLocaleLowerCase(), props[key])
+    } else if (key === 'style') {
+      // 如果是样式 style
+      // style = { color: 'red' }
+      // <div style="color: red"></div>
+      const styleObj = props[key]
+      Object.keys(styleObj).forEach(styleName => {
+        dom.style[styleName] = styleObj[styleName]
+      })
+    } else {
+      dom[key] = props[key]
+    }
+  }
 }
 
 // 处理 forwardRef 包裹的函数组件
@@ -113,7 +163,7 @@ const getDOMByForwardRef = (VNode) => {
   // const FuncComp = (props, ref) => (<div>函数组件</div>)
   // 包裹在 forwordRef 的函数组件，多一个 ref 属性
   const renderVNode = type.render && type.render(props, ref)
-
+ 
   if (!renderVNode) return null
 
   const dom = createDOM(renderVNode)
@@ -129,7 +179,7 @@ const getDOMByFuncCom = (VNode) => {
   //   props: {
   //       children: []
   //   },
-  //   type: () => {}
+  //   type: function MyFuncCom() {}
   // }
 
   const { type, props } = VNode
@@ -170,6 +220,10 @@ const getDOMByClassCom = (VNode) => {
 
   // 将 classComInstance 挂载到 VNode，是为了后面 diff 时使用
   VNode.classComInstance = classComInstance;
+
+  // 处理 ref，注意这里，类组件的 ref current 是当前类实例
+  ref && (ref.current = classComInstance)
+
   // 将 renderVNode 挂载到类组件实例，为了后面更新时，与新的 VNode 进行比较 
   classComInstance.oldVNode = renderVNode
 
@@ -179,54 +233,16 @@ const getDOMByClassCom = (VNode) => {
   //     age: 999
   //   })
   // }, 3000)
-
+ 
   if (!renderVNode) return null
 
   // 重新走 createDOM 创建元素
   const dom = createDOM(renderVNode)
 
-  // 处理 ref，注意这里，类组件的 ref current 是当前类实例
-  ref && (ref.current = classComInstance)
+  // componentDidMount 生命周期钩子
+  classComInstance.componentDidMount && classComInstance.componentDidMount()
 
   return dom
-}
-
-const mountArray = (VNode, parent) => {
-  if (isType(VNode) !== 'Array') return;
-  VNode.forEach((child, index) => {
-    child && (child.index = index)
-    mount(child, parent)
-  })
-}
-
-// 设置属性
-const setPropsForDOM = (props = {}, dom) => {
-  if (!dom) return
-
-  // props: {
-  //   children: [],
-  //   style: {}, 
-  //   onClick: () => {}
-  // }
-  for (let key in props) {
-    // 如果是 children，已经处理过，跳过
-    if (key === 'children') continue
-
-    if (/^on[A-Z].*/.test(key)) {
-      // 如果是事件
-      addEvent(dom, key.toLocaleLowerCase(), props[key])
-    } else if (key === 'style') {
-      // 如果是样式 style
-      // style = { color: 'red' }
-      // <div style="color: red"></div>
-      const styleObj = props[key]
-      Object.keys(styleObj).forEach(styleName => {
-        dom.style[styleName] = styleObj[styleName]
-      })
-    } else {
-      dom[key] = props[key]
-    }
-  }
 }
 
 export const findDOMByVNode = (VNode) => {
@@ -256,7 +272,7 @@ export const updateDomTree = (oldVNode, newVNode, oldDOM) => {
     REPLACE: oldVNode && newVNode && oldVNode.type !== newVNode.type
   }
 
-  // 结果类似 ['ADD', 'DELETE']，从这里面取第一个
+  // 使用 filter 过滤了，只有结果为 true 的才会被过滤出来。这里是取到第一个为 true 的 key
   const UPDATE_TYPE = Object.keys(typeMap).filter(key => typeMap[key])[0]
 
   switch(UPDATE_TYPE) {
@@ -273,7 +289,7 @@ export const updateDomTree = (oldVNode, newVNode, oldDOM) => {
       break
     case 'REPLACE':
       // 新、旧节点都存在，但是类型不一样，先移除旧节点，再创建新节点
-      removeVNode()
+      removeVNode(oldVNode, parentNode)
       addVNode(newVNode, parentNode)
       break
     default:
@@ -290,7 +306,13 @@ const addVNode = (newVNode, parentNode) => {
 
 const removeVNode = (oldVNode, parentNode) => {
   const oldDOM = findDOMByVNode(oldVNode)
+  // 使用父节点 removeChild 兼容性比直接自身 dom.remove() 好
   parentNode.removeChild(oldDOM)
+
+  // componentWillUnmount 生命周期（只有类组件才有 classComInstance 实例）
+  if (oldVNode.classComInstance && oldVNode.classComInstance.componentWillUnmount) {
+    oldVNode.classComInstance.componentWillUnmount()
+  }
 }
 
 const deepDomDiff = (oldVNode, newVNode) => {
@@ -298,15 +320,16 @@ const deepDomDiff = (oldVNode, newVNode) => {
 
   const diffTypeMap = {
     // 原生节点
-    ORIGIN_NODE: isType(oldVNodeType) === 'String',
+    ORIGIN_NODE: isTypeOf(oldVNodeType, 'String'),
     // 类组件
-    CLASS_COMPONENT: isType(oldVNodeType) === 'Function' && oldVNodeType.IS_CLASS_COMPONENT,
+    CLASS_COMPONENT: isTypeOf(oldVNodeType, 'Function') && oldVNodeType.IS_CLASS_COMPONENT,
     // 函数组件
-    FUNCTION_COMPONENT: isType(oldVNodeType) === 'Function',
+    FUNCTION_COMPONENT: isTypeOf(oldVNodeType, 'Function'),
     // 文本节点
     TEXT_NODE: oldVNodeType === REACT_TEXT
   }
 
+  // 使用 filter 过滤了，只有结果为 true 的才会被过滤出来。这里是取到第一个为 true 的 key
   const DIFF_TYPE = Object.keys(diffTypeMap).filter(key => diffTypeMap[key])[0]
 
   switch (DIFF_TYPE) {
@@ -330,7 +353,7 @@ const deepDomDiff = (oldVNode, newVNode) => {
       updateFunctionComponent(oldVNode, newVNode)
       break;
     case 'TEXT_NODE':
-      // 文本节点
+      // 文本节点，直接将新的文本节点赋值给旧的文本节点
       newVNode.dom = findDOMByVNode(oldVNode)
       newVNode.dom.textContent = newVNode.props.text
       break;
@@ -339,13 +362,16 @@ const deepDomDiff = (oldVNode, newVNode) => {
   }
 }
 
+// 更新子节点，diff 比较
+// 验证：可以在浏览器用鼠标选中不变的节点，当触发更新，查看鼠标是否还是选中的节点
 const updateChildren = (parentDOM, oldVNodeChildren, newVNodeChildren) => {
-  oldVNodeChildren = (isType(oldVNodeChildren) === 'Array' ? oldVNodeChildren : [oldVNodeChildren]).filter(Boolean)
-  newVNodeChildren = (isType(newVNodeChildren) === 'Array' ? newVNodeChildren : [newVNodeChildren]).filter(Boolean)
+  oldVNodeChildren = (isTypeOf(oldVNodeChildren, 'Array') ? oldVNodeChildren : [oldVNodeChildren]).filter(Boolean)
+  newVNodeChildren = (isTypeOf(newVNodeChildren, 'Array') ? newVNodeChildren : [newVNodeChildren]).filter(Boolean)
 
+  // 记录当前处理过的节点中，最大的索引位置
   let lastNotChangedIndex = -1
 
-  // 保存 key 和对应节点的关系
+  // 保存旧 VNode 的 key 和对应节点的关系
   const oldKeyChildMap = {}
 
   oldVNodeChildren.forEach((oldVNodeChild, index) => {
@@ -376,28 +402,38 @@ const updateChildren = (parentDOM, oldVNodeChildren, newVNodeChildren) => {
       deepDomDiff(oldVNodeChild, newVNodeChild)
 
       /**
+       * 举例：
        * old: A B C D E
-       * new: C B E F A
-       *   不动: C E
-       *   移动: B A
+       * new:     C B E F A
+       *   不动: C E，因为它们的索引是递增的
+       *   移动: B A，因为它们的索引小于前面已处理节点的最大索引
        *   新增: F
        *   删除: D
        * 
        * 注意: 这里是遍历的新的 VNode，所以不动还是移动是相对于新 VNode 的
        *     比如这里，遍历的第一个是 C，那么后面所有的位置都是相对于新 VNode 的 C 来说的
-       *     所以，这里的 dom diff 算法，在一些场景下存在性能问题的，比如: E A B C D。VUE3 的最长递增子序列就可以解决这个问题
+       *     所以，这里的 dom diff 算法，在一些场景下存在性能问题的，比如: E A B C D，原来只需要移动 E 到开头，但是这里会除了 E 不动，其它全部移动了
+       *     Vue3 的最长递增子序列就可以解决这个问题
+       * 
+       * 如果当前节点的索引小于 lastNotChangedIndex，说明需要移动
+       * 这是因为在新的顺序中，当前节点在之前处理过的节点后面，但在旧的顺序中，它的位置却在前面
+       * 比如 B，它在新的顺序中是在 C 后面，但在旧的顺序中，它的位置却在 C 前面
+       * 
+       * oldVNodeChild.index 的 index 是在 mountArray 时赋值的
        */
       if(oldVNodeChild.index < lastNotChangedIndex) {
-        // 需要移动节点
+        // 需要移动的节点
         actions.push({
           type: REACT_DIFF_MOVE,
           oldVNodeChild,
           newVNodeChild,
           index
         })
-      }
+      } 
 
+      // 删除 oldKeyChildMap 中处理过的节点
       delete oldKeyChildMap[newKey]
+      // 注意，这里使用的是 oldVNodeChild 的 index
       lastNotChangedIndex = Math.max(oldVNodeChild.index, lastNotChangedIndex)
     } else {
       // 没找到，说明需要新建
@@ -414,7 +450,7 @@ const updateChildren = (parentDOM, oldVNodeChildren, newVNodeChildren) => {
     .filter(action => action.type === REACT_DIFF_MOVE)
     .map(action => action.oldVNodeChild)
 
-  // 剩下的是需要删除的
+  // delete oldKeyChildMap[newKey] 这一步没有删除完的，是需要删除的节点
   const VNodeDelete = Object.values(oldKeyChildMap)
 
   // 需要移动和删除的，都先删除
@@ -441,7 +477,8 @@ const updateChildren = (parentDOM, oldVNodeChildren, newVNodeChildren) => {
     const childNode = childNodes[index]
 
     if (childNode) {
-      // 如果通过 actions 的 index 找到 childNode 中有值，说明位置被 childNode 的这个占据了，所以要在它前面插入
+      // 如果通过 actions 的 index 如果能找到 childNode
+      // 说明 actions 中元素位置被 childNode 的这个占据了，所以要在 childNode 前面插入
       parentDOM.insertBefore(getDOMForInsert(), childNode)
     } else {
       // 否则，直接往后面追加就可以
@@ -451,8 +488,9 @@ const updateChildren = (parentDOM, oldVNodeChildren, newVNodeChildren) => {
 }
 
 const updateClassComponent = (oldVNode, newVNode) => {
-  const classComInstance = newVNode.classComInstance = oldVNode.classComInstance
-  classComInstance.updater.launchUpdate()
+  // 类组件的实例是不会变的，新旧 VNode 都是同一个 class 实例
+  const classComInstance = (newVNode.classComInstance = oldVNode.classComInstance)
+  classComInstance.updater.launchUpdate(newVNode.props)
 }
 
 const updateFunctionComponent = (oldVNode, newVNode) => {
