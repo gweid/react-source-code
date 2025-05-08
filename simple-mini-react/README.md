@@ -191,6 +191,7 @@ diff 比对，分为（实际上，类组件和函数组件最终都会是原生
 
 - 实现 getDerivedStateFromProps(props, state) 生命周期
   - 在 render 函数之前调用（无论是初始化渲染还是更新）
+  - 组件的 ​​state 依赖 props​​，且需要在 props 变化时同步更新 state 时使用
 
 - 实现 getSnapshotBeforeUpdate(prevProps, prevState) 生命周期
   - 在组件更新前（​​DOM 即将变化但尚未渲染到屏幕时​​）被调用，用来捕获更新前的 DOM 状态（如滚动位置）
