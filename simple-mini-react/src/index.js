@@ -400,9 +400,6 @@ const root = document.getElementById('root');
 
 // ----------------------- PureComponent -----------------------
 class SonCom extends React.PureComponent {
-  constructor(props) {
-    super(props)
-  }
 
   render() {
     console.log('son render');

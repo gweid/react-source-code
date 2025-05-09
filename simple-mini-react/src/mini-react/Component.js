@@ -64,8 +64,6 @@ class Updater {
     const nextState = pendingState.reduce((preState, newState) => {
       return { ...preState, ...newState }
     }, ClassComInstance.state)
-
-    debugger
  
     // 清空 pendingState
     pendingState.length = 0
