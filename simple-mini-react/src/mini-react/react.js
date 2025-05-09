@@ -1,7 +1,7 @@
 // 自定义 React.createElement 函数
 import { Component, PureComponent } from './Component'
-import { toVNode } from './utils'
-import { REACT_ELEMENT, REACT_FORWARD_REF } from './constant'
+import { toVNode, shallowCompare } from './utils'
+import { REACT_ELEMENT, REACT_FORWARD_REF, REACT_MEMO } from './constant'
 
 // <div>react<span>react demo</span></div> 这个会被 babel 转化成：
 // React.createElement("div", null, "react", React.createElement("span", null, "react demo"));
@@ -73,10 +73,24 @@ const forwardRef = (render) => {
   }
 }
 
+const memo = (type, compare = shallowCompare) => {
+  // {
+  //   $$typeof: Symbol('react.memo'),
+  //   compare: null,
+  //   type: (props) => {}
+  // }
+  return {
+    $$typeof: REACT_MEMO,
+    type,
+    compare
+  }
+}
+
 const React = {
   createElement,
   Component,
   PureComponent,
+  memo,
   createRef,
   forwardRef
 }

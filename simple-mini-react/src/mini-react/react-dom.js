@@ -1,6 +1,13 @@
 import { isTypeOf } from './utils'
 import { addEvent } from './events'
-import { REACT_ELEMENT, REACT_FORWARD_REF, REACT_TEXT, REACT_DIFF_CREATE, REACT_DIFF_MOVE } from './constant'
+import {
+  REACT_ELEMENT,
+  REACT_FORWARD_REF,
+  REACT_TEXT,
+  REACT_MEMO,
+  REACT_DIFF_CREATE,
+  REACT_DIFF_MOVE
+} from './constant'
 
 /**
  * ReactDOM.render 函数
@@ -53,6 +60,11 @@ const mount = (VNode, containerDOM) => {
  */
 const createDOM = (VNode) => {
   const { $$typeof, type, props, ref } = VNode
+
+  // 如果是 memo 包裹的组件
+  if(type && type.$$typeof === REACT_MEMO) {
+    return getDOMByMemo(VNode)
+  }
 
   // 如果是 forwardRef 包裹的函数组件
   // 注意这里是 type 中的 $$typeof，与 VNode 中的 $$typeof 是不一样的
@@ -155,6 +167,20 @@ const setPropsForDOM = (props = {}, dom) => {
   }
 }
 
+// 处理 memo 包裹的组件
+const getDOMByMemo = (VNode) => {
+  const { type, props } = VNode
+
+  const renderVNode = type.type && type.type(props)
+
+  if (!renderVNode) return null
+
+  VNode.oldRenderVNode = renderVNode
+
+  const dom = createDOM(renderVNode)
+  return dom
+}
+
 // 处理 forwardRef 包裹的函数组件
 const getDOMByForwardRef = (VNode) => {
   const { type, props, ref } = VNode
@@ -165,6 +191,8 @@ const getDOMByForwardRef = (VNode) => {
   const renderVNode = type.render && type.render(props, ref)
  
   if (!renderVNode) return null
+
+  VNode.oldRenderVNode = renderVNode
 
   const dom = createDOM(renderVNode)
   return dom
@@ -183,7 +211,7 @@ const getDOMByFuncCom = (VNode) => {
   // }
 
   const { type, props } = VNode
-  // 执行函数，拿到函数组件的虚拟 DOM 
+  // 执行函数，拿到函数组件的虚拟 DOM
   const renderVNode = type && type(props)
 
   if (!renderVNode) return null
@@ -326,7 +354,9 @@ const deepDomDiff = (oldVNode, newVNode) => {
     // 函数组件
     FUNCTION_COMPONENT: isTypeOf(oldVNodeType, 'Function'),
     // 文本节点
-    TEXT_NODE: oldVNodeType === REACT_TEXT
+    TEXT_NODE: oldVNodeType === REACT_TEXT,
+    // memo
+    MEMO: oldVNodeType === REACT_MEMO
   }
 
   // 使用 filter 过滤了，只有结果为 true 的才会被过滤出来。这里是取到第一个为 true 的 key
@@ -356,6 +386,10 @@ const deepDomDiff = (oldVNode, newVNode) => {
       // 文本节点，直接将新的文本节点赋值给旧的文本节点
       newVNode.dom = findDOMByVNode(oldVNode)
       newVNode.dom.textContent = newVNode.props.text
+      break;
+    case 'MEMO':
+      // memo 包裹的组件
+      updateMemoCom(oldVNode, newVNode)
       break;
     default:
       break;
@@ -494,13 +528,29 @@ const updateClassComponent = (oldVNode, newVNode) => {
 }
 
 const updateFunctionComponent = (oldVNode, newVNode) => {
-  const oldDOM = findDOMByVNode(oldVNode)
+  // 这里必须将 dom 绑定到 newVNode 上，因为后面 updateDomTree 会用到
+  const oldDOM = newVNode.dom = findDOMByVNode(oldVNode)
   if (!oldDOM) return
   const { type, props } = newVNode
   const newRenderVNode = type(props)
 
   updateDomTree(oldVNode.oldRenderVNode, newRenderVNode, oldDOM)
   newVNode.oldRenderVNode = newRenderVNode
+}
+
+const updateMemoCom = (oldVNode, newVNode) => {
+  const { type, props } = newVNode
+
+  // props 不是浅相等，更新
+  if (!type.compare(oldVNode.props, newVNode.props)) {
+    const oldDOM = findDOMByVNode(oldVNode)
+    if (!oldDOM) return
+    const newRenderVNode = type.type(props)
+    updateDomTree(oldVNode.oldRenderVNode, newRenderVNode, oldDOM)
+    newVNode.oldRenderVNode = newRenderVNode
+  } else {
+    newVNode.oldRenderVNode = oldVNode.oldRenderVNode
+  }
 }
 
 const ReactDOM = {
