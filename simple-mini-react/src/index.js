@@ -330,70 +330,127 @@ const root = document.getElementById('root');
 // ReactDOM.render(<ParentCom />, root);
 
 
-
 // ----------------------- 生命周期(getSnapshotBeforeUpdate) -----------------------
-class ScrollList extends React.Component {
+// class ScrollList extends React.Component {
+//   constructor(props) {
+//     super(props)
+
+//     this.state = {
+//       dataList: []
+//     }
+
+//     this.listRef = React.createRef();
+//   }
+
+//   addItem = () => {
+//     const { dataList } = this.state;
+//     const newItem = {
+//       id: dataList.length + 1,
+//       text: `Item ${dataList.length + 1}`
+//     };
+
+//     this.setState({
+//       dataList: [...dataList, newItem]
+//     });
+//   }
+
+//   getSnapshotBeforeUpdate(prevProps, prevState) {
+//     console.log('getSnapshotBeforeUpdate')
+
+//     if (prevState.dataList.length < this.state.dataList.length) {
+//       return this.listRef.current.scrollHeight;
+//     }
+//     return null;
+//   }
+
+//   componentDidUpdate(prevProps, prevState, snapshot) {
+//     if (snapshot !== null) {
+//       this.listRef.current.scrollTop += this.listRef.current.scrollHeight - snapshot;
+//     }
+//   }
+
+//   render() {
+//     const { dataList } = this.state
+
+//     console.log('render');
+
+//     return (
+//       <div>
+//         <button onClick={this.addItem}>添加项目</button>
+//         <div
+//           ref={this.listRef}
+//           style={{
+//             overflowY: 'scroll',
+//             width: '100px',
+//             height: '150px',
+//             border: '1px solid #ccc'
+//           }}
+//         >
+//           {dataList.map(item => (
+//             <div key={item.id}>{item.text}</div>
+//           ))}
+//         </div>
+//       </div>
+//     );
+//   }
+// }
+
+// ReactDOM.render(<ScrollList />, root);
+
+
+// ----------------------- PureComponent -----------------------
+class SonCom extends React.PureComponent {
+  constructor(props) {
+    super(props)
+  }
+
+  render() {
+    console.log('son render');
+
+    return (
+      <div>
+        <div>{this.props.name}</div>
+      </div>
+    )
+  }
+}
+
+class ParentCom extends React.Component {
   constructor(props) {
     super(props)
 
     this.state = {
-      dataList: []
+      num: 0,
+      name: '张三'
     }
-
-    this.listRef = React.createRef();
   }
 
-  addItem = () => {
-    const { dataList } = this.state;
-    const newItem = {
-      id: dataList.length + 1,
-      text: `Item ${dataList.length + 1}`
-    };
-
+  handleAdd = () => {
     this.setState({
-      dataList: [...dataList, newItem]
-    });
+      num: this.state.num + 1
+    })
   }
 
-  getSnapshotBeforeUpdate(prevProps, prevState) {
-    console.log('getSnapshotBeforeUpdate')
-
-    if (prevState.dataList.length < this.state.dataList.length) {
-      return this.listRef.current.scrollHeight;
-    }
-    return null;
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if (snapshot !== null) {
-      this.listRef.current.scrollTop += this.listRef.current.scrollHeight - snapshot;
-    }
+  handleName = () => {
+    this.setState({
+      name: '李四'
+    })
   }
 
   render() {
-    const { dataList } = this.state
-
-    console.log('render');
-
     return (
       <div>
-        <button onClick={this.addItem}>添加项目</button>
-        <div
-          ref={this.listRef}
-          style={{
-            overflowY: 'scroll',
-            width: '100px',
-            height: '150px',
-            border: '1px solid #ccc'
-          }}
-        >
-          {dataList.map(item => (
-            <div key={item.id}>{item.text}</div>
-          ))}
+        <div>
+          <div>{this.state.num}</div>
+          <button onClick={this.handleAdd}>数字增加</button>
+        </div>
+        <div>
+          <SonCom name={this.state.name} />
+          <button onClick={this.handleName}>改变名字</button>
         </div>
       </div>
-    );
+    )
   }
-}
+};
 
-ReactDOM.render(<ScrollList />, root);
+ReactDOM.render(<ParentCom />, root);

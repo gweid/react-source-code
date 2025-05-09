@@ -13,6 +13,7 @@ export const toVNode = (node) => {
     }: node
 }
 
+// 深拷贝
 export const deepClone = (data) => {
   // 处理基本类型和 null
   if (data === null || typeof data !== 'object') {
@@ -68,4 +69,28 @@ export const deepClone = (data) => {
   }
 
   return clone(data)
+}
+
+// 浅比较
+export const shallowCompare = (obj1, obj2) => {
+  if (Object.is(obj1, obj2)) return true
+
+  // 如果不是对象，直接返回 false
+  if (!isTypeOf(obj1, 'Object') || !isTypeOf(obj2, 'Object')) return false
+
+  const keys1 = Object.keys(obj1)
+  const keys2 = Object.keys(obj2)
+
+  if (keys1.length !== keys2.length) return false
+
+  for (let key of keys1) {
+    if (
+      !obj2.hasOwnProperty(key) || 
+      obj1[key] !== obj2[key]
+    ) {
+      return false
+    }
+  }
+
+  return true
 }

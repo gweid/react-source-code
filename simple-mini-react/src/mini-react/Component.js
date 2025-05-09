@@ -1,5 +1,5 @@
 import { findDOMByVNode, updateDomTree } from './react-dom'
-import { deepClone } from './utils'
+import { deepClone, shallowCompare } from './utils'
 
 export const updateQueue = {
   isBatch: false, // 是否进行批量更新
@@ -64,6 +64,8 @@ class Updater {
     const nextState = pendingState.reduce((preState, newState) => {
       return { ...preState, ...newState }
     }, ClassComInstance.state)
+
+    debugger
  
     // 清空 pendingState
     pendingState.length = 0
@@ -132,5 +134,11 @@ export class Component {
     if (this.componentDidUpdate) {
       this.componentDidUpdate(this.props, this.state, snapshot)
     }
+  }
+}
+
+export class PureComponent extends Component {
+  shouldComponentUpdate(nextProps, nextState) {
+    return !shallowCompare(this.props, nextProps) || !shallowCompare(this.state, nextState)
   }
 }

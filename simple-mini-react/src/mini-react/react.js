@@ -1,5 +1,5 @@
 // 自定义 React.createElement 函数
-import { Component } from './Component'
+import { Component, PureComponent } from './Component'
 import { toVNode } from './utils'
 import { REACT_ELEMENT, REACT_FORWARD_REF } from './constant'
 
@@ -20,7 +20,7 @@ const createElement = (type, properties, ...args) => {
   // }
 
   // 先删除不是 react 本身的无用属性，这两个属性是 babel 编译 jsx 带上的
-  const filterKey = ['_owner', '_store']
+  const filterKey = ['_owner', '_store', '__self', '__source']
   filterKey.forEach(key => {
     delete properties[key]
   })
@@ -32,7 +32,7 @@ const createElement = (type, properties, ...args) => {
   if (args.length === 1) {
     props.children = toVNode(args[0])
   } else {
-    props.children = args.map(toVNode) 
+    props.children = args.map(toVNode)
   }
 
   return {
@@ -76,6 +76,7 @@ const forwardRef = (render) => {
 const React = {
   createElement,
   Component,
+  PureComponent,
   createRef,
   forwardRef
 }
