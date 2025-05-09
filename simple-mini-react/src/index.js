@@ -1,8 +1,8 @@
 // import React from 'react';
 // import ReactDOM from 'react-dom'; // react16.x 版本
 // import ReactDOM from 'react-dom/client'; // react18.x 版本
-import React from 'react';
-import ReactDOM from 'react-dom';
+import React from './mini-react/react';
+import ReactDOM from './mini-react/react-dom';
  
 // react 18.x 版本
 // const root = ReactDOM.createRoot(document.getElementById('root'));

@@ -356,7 +356,7 @@ const deepDomDiff = (oldVNode, newVNode) => {
     // 文本节点
     TEXT_NODE: oldVNodeType === REACT_TEXT,
     // memo
-    MEMO: oldVNodeType === REACT_MEMO
+    MEMO: oldVNodeType.$$typeof === REACT_MEMO
   }
 
   // 使用 filter 过滤了，只有结果为 true 的才会被过滤出来。这里是取到第一个为 true 的 key
