@@ -1,7 +1,9 @@
 // import React from 'react';
 // import ReactDOM from 'react-dom'; // react16.x 版本
 // import ReactDOM from 'react-dom/client'; // react18.x 版本
-import React from './mini-react/react';
+import React, {
+  useState
+} from './mini-react/react';
 import ReactDOM from './mini-react/react-dom';
  
 // react 18.x 版本
@@ -454,52 +456,71 @@ const root = document.getElementById('root');
 
 
 // ----------------------- memo -----------------------
-const SonCom = React.memo((props) => {
-  console.log('son render')
+// const SonCom = React.memo((props) => {
+//   console.log('son render')
+
+//   return (
+//     <div>
+//       <div>{props.name}</div>
+//     </div>
+//   )
+// })
+
+// class ParentCom extends React.Component {
+//   constructor(props) {
+//     super(props)
+
+//     this.state = {
+//       num: 0,
+//       name: '张三'
+//     }
+//   }
+
+//   handleAdd = () => {
+//     this.setState({
+//       num: this.state.num + 1
+//     })
+//   }
+
+//   handleName = () => {
+//     this.setState({
+//       name: '李四'
+//     })
+//   }
+
+//   render() {
+//     return (
+//       <div>
+//         <div>
+//           <div>{this.state.num}</div>
+//           <button onClick={this.handleAdd}>数字增加</button>
+//         </div>
+//         <div>
+//           <SonCom name={this.state.name} />
+//           <button onClick={this.handleName}>改变名字</button>
+//         </div>
+//       </div>
+//     )
+//   }
+// };
+
+// ReactDOM.render(<ParentCom />, root);
+
+
+// ----------------------- useState -----------------------
+function MyFuncCom() {
+  const [count, setCount] = useState(100)
+
+  const handleAdd = () => {
+    setCount(count + 1)
+  }
 
   return (
     <div>
-      <div>{props.name}</div>
+      <div>{count}</div>
+      <button onClick={handleAdd}>加加</button>
     </div>
   )
-})
+}
 
-class ParentCom extends React.Component {
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      num: 0,
-      name: '张三'
-    }
-  }
-
-  handleAdd = () => {
-    this.setState({
-      num: this.state.num + 1
-    })
-  }
-
-  handleName = () => {
-    this.setState({
-      name: '李四'
-    })
-  }
-
-  render() {
-    return (
-      <div>
-        <div>
-          <div>{this.state.num}</div>
-          <button onClick={this.handleAdd}>数字增加</button>
-        </div>
-        <div>
-          <SonCom name={this.state.name} />
-          <button onClick={this.handleName}>改变名字</button>
-        </div>
-      </div>
-    )
-  }
-};
-
-ReactDOM.render(<ParentCom />, root);
+ReactDOM.render(<MyFuncCom />, root);

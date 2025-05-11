@@ -8,6 +8,9 @@ import {
   REACT_DIFF_CREATE,
   REACT_DIFF_MOVE
 } from './constant'
+import { resetHookIndex } from './hooks'
+
+export let emitUpdateForHooks
 
 /**
  * ReactDOM.render 函数
@@ -21,6 +24,13 @@ const render = (VNode, containerDOM) => {
   // 实际上 render 上会做一些初始化处理，所以进行虚拟 DOM 转换及挂载真实 DOM 的操作放在 mount 函数
   // 初始化渲染的操作（省略...）
   mount(VNode, containerDOM)
+
+  // 给 useState 使用
+  emitUpdateForHooks = () => {
+    // 因为是 useState 函数触发更新，是从根节点开始，所以要重置 hookIndex
+    resetHookIndex()
+    updateDomTree(VNode, VNode, findDOMByVNode(VNode))
+  }
 }
 
 /**
@@ -389,7 +399,7 @@ const deepDomDiff = (oldVNode, newVNode) => {
       break;
     case 'MEMO':
       // memo 包裹的组件
-      updateMemoCom(oldVNode, newVNode)
+      updateMemoComponent(oldVNode, newVNode)
       break;
     default:
       break;
@@ -538,7 +548,7 @@ const updateFunctionComponent = (oldVNode, newVNode) => {
   newVNode.oldRenderVNode = newRenderVNode
 }
 
-const updateMemoCom = (oldVNode, newVNode) => {
+const updateMemoComponent = (oldVNode, newVNode) => {
   const { type, props } = newVNode
 
   // props 不是浅相等，更新

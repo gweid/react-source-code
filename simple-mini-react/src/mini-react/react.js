@@ -3,6 +3,9 @@ import { Component, PureComponent } from './Component'
 import { toVNode, shallowCompare } from './utils'
 import { REACT_ELEMENT, REACT_FORWARD_REF, REACT_MEMO } from './constant'
 
+// 导出所有 hooks
+export * from './hooks'
+
 // <div>react<span>react demo</span></div> 这个会被 babel 转化成：
 // React.createElement("div", null, "react", React.createElement("span", null, "react demo"));
 const createElement = (type, properties, ...args) => {
