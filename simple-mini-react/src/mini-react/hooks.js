@@ -25,3 +25,18 @@ export const useState = (initValue) => {
 
   return [state[currentIndex], setState]
 }
+
+export const useReducer = (reducer, initValue) => {
+  state[hookIndex] = state[hookIndex] || initValue
+
+  let currentIndex = hookIndex
+
+  const dispatch = (action) => {
+    state[currentIndex] = reducer(state[currentIndex], action)
+    emitUpdateForHooks()
+  }
+
+  hookIndex++
+
+  return [state[currentIndex], dispatch]
+}
