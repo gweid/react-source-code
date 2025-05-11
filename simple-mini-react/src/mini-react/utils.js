@@ -86,7 +86,12 @@ export const shallowCompare = (obj1, obj2) => {
   for (let key of keys1) {
     if (
       !obj2.hasOwnProperty(key) || 
-      obj1[key] !== obj2[key]
+      (
+        // 如果两个值都是数组且都为空，则认为相等
+        (Array.isArray(obj1[key]) && Array.isArray(obj2[key]) && obj1[key].length === 0 && obj2[key].length === 0) 
+          ? false  // 空数组相等，返回 false 继续比较其他属性
+          : obj1[key] !== obj2[key]  // 其他情况按原来的方式比较
+      )
     ) {
       return false
     }

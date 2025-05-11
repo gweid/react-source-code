@@ -88,8 +88,37 @@ export const useRef = (initValue) => {
   return states[currrentIndex]
 }
 
-export function useImperativeHandle(ref, dataFactory) {
+export const useImperativeHandle = (ref, dataFactory) => {
   setTimeout(() => {
     ref.current = dataFactory();
   }, 4);
+}
+
+export const useMemo = (memoFn, deps) => {
+  const [preData, preDeps] = states[hookIndex] || [null, null]
+
+  // 第一次调用或者传入的 deps 发生变化，那么需要执行 memoFn
+  if (!states[hookIndex] || deps.some((item, index) => item !== preDeps[index])) {
+    const newData = memoFn()
+    states[hookIndex] = [newData, deps]
+    hookIndex++
+    return newData
+  } else {
+    hookIndex++
+    return preData
+  }
+}
+
+export const useCallback = (callbackFn, deps) => {
+  const [preCallbackFn, preDeps] = states[hookIndex] || [null, null]
+
+  // 第一次调用或者传入的 deps 发生变化
+  if (!states[hookIndex] || deps.some((item, index) => item!== preDeps[index])) {
+    states[hookIndex] = [callbackFn, deps]
+    hookIndex++
+    return callbackFn
+  } else {
+    hookIndex++
+    return preCallbackFn
+  }
 }

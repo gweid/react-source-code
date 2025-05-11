@@ -7,7 +7,9 @@ import React, {
   useEffect,
   useLayoutEffect,
   useRef,
-  useImperativeHandle
+  useImperativeHandle,
+  useMemo,
+  useCallback,
 } from './mini-react/react';
 import ReactDOM from './mini-react/react-dom';
  
@@ -608,33 +610,70 @@ const root = document.getElementById('root');
 
 
 // ----------------------- useImperativeHandle -----------------------
-const SonCom = React.forwardRef((props, ref) => {
-  const iptRef = useRef(null)
+// const SonCom = React.forwardRef((props, ref) => {
+//   const iptRef = useRef(null)
 
-  useImperativeHandle(ref, () => {
-    return {
-      focus() {
-        iptRef.current.focus()
-      }
-    }
-  })
+//   useImperativeHandle(ref, () => {
+//     return {
+//       focus() {
+//         iptRef.current.focus()
+//       }
+//     }
+//   })
+
+//   return (
+//     <input {...props} ref={iptRef} />
+//   )
+// })
+
+// function ParentCom() {
+//   const sonRef = useRef(null)
+
+//   const handleSonFocus = () => {
+//     sonRef.current.focus()
+//   }
+
+//   return (
+//     <div>
+//       <SonCom ref={sonRef}></SonCom>
+//       <button onClick={handleSonFocus}>聚焦</button>
+//     </div>
+//   )
+// }
+
+// ReactDOM.render(<ParentCom />, root);
+
+
+// ----------------------- useMemo 和 useCallback -----------------------
+const SonCom = React.memo((props) => {
+  console.log('son render')
 
   return (
-    <input {...props} ref={iptRef} />
+    <div>son 组件</div>
   )
 })
 
 function ParentCom() {
-  const sonRef = useRef(null)
+  console.log('parent render')
 
-  const handleSonFocus = () => {
-    sonRef.current.focus()
+  const [age, setAge] = useState(18)
+  const [name, setName] = useState('张三')
+
+  const dataList = useMemo(() => [age, age], [age])
+
+  const handleChangeAge = useCallback(() => {
+    setAge(age + 1)
+  }, [age])
+
+  const handleChangeName = () => {
+    setName('李四')
   }
 
   return (
     <div>
-      <SonCom ref={sonRef}></SonCom>
-      <button onClick={handleSonFocus}>聚焦</button>
+      <SonCom dataList={dataList} handleChangeAge={handleChangeAge} />
+      <button onClick={handleChangeAge}>更新age</button>
+      <button onClick={handleChangeName}>更新name</button>
     </div>
   )
 }

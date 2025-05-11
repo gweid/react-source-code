@@ -193,6 +193,8 @@ const getDOMByMemo = (VNode) => {
   VNode.oldRenderVNode = renderVNode
 
   const dom = createDOM(renderVNode)
+
+  VNode.dom = dom
   return dom
 }
 
@@ -558,7 +560,7 @@ const updateMemoComponent = (oldVNode, newVNode) => {
 
   // props 不是浅相等，更新
   if (!type.compare(oldVNode.props, newVNode.props)) {
-    const oldDOM = findDOMByVNode(oldVNode)
+    const oldDOM = newVNode.dom = findDOMByVNode(oldVNode)
     if (!oldDOM) return
     const newRenderVNode = type.type(props)
     updateDomTree(oldVNode.oldRenderVNode, newRenderVNode, oldDOM)
