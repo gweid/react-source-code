@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useLayoutEffect,
   useRef,
+  useImperativeHandle
 } from './mini-react/react';
 import ReactDOM from './mini-react/react-dom';
  
@@ -589,18 +590,53 @@ const root = document.getElementById('root');
 
 
 // ----------------------- useRef -----------------------
-function MyFuncCom() {
-  const divRef = useRef(null)
+// function MyFuncCom() {
+//   const divRef = useRef(null)
 
-  const handleGetRef = () => {
-    console.log(divRef.current)
+//   const handleGetRef = () => {
+//     console.log(divRef.current)
+//   }
+
+//   return (
+//     <div ref={divRef}>
+//       <button onClick={handleGetRef}>获取ref</button>
+//     </div>
+//   )
+// }
+
+// ReactDOM.render(<MyFuncCom />, root);
+
+
+// ----------------------- useImperativeHandle -----------------------
+const SonCom = React.forwardRef((props, ref) => {
+  const iptRef = useRef(null)
+
+  useImperativeHandle(ref, () => {
+    return {
+      focus() {
+        iptRef.current.focus()
+      }
+    }
+  })
+
+  return (
+    <input {...props} ref={iptRef} />
+  )
+})
+
+function ParentCom() {
+  const sonRef = useRef(null)
+
+  const handleSonFocus = () => {
+    sonRef.current.focus()
   }
 
   return (
-    <div ref={divRef}>
-      <button onClick={handleGetRef}>获取ref</button>
+    <div>
+      <SonCom ref={sonRef}></SonCom>
+      <button onClick={handleSonFocus}>聚焦</button>
     </div>
   )
 }
 
-ReactDOM.render(<MyFuncCom />, root);
+ReactDOM.render(<ParentCom />, root);

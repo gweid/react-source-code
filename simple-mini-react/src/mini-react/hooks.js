@@ -87,3 +87,9 @@ export const useRef = (initValue) => {
 
   return states[currrentIndex]
 }
+
+export function useImperativeHandle(ref, dataFactory) {
+  setTimeout(() => {
+    ref.current = dataFactory();
+  }, 4);
+}
