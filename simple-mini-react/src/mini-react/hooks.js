@@ -22,7 +22,6 @@ export const useState = (initValue) => {
 
   // 这是因为，会多次使用 useState，此时就需要更新存储的索引
   hookIndex++
-
   return [states[currentIndex], setState]
 }
 
@@ -37,7 +36,6 @@ export const useReducer = (reducer, initValue) => {
   }
 
   hookIndex++
-
   return [states[currentIndex], dispatch]
 }
 
@@ -81,11 +79,10 @@ export const useLayoutEffect = (effectFn, deps = []) => {
 export const useRef = (initValue) => {
   states[hookIndex] = states[hookIndex] || { current: initValue }
 
-  const currrentIndex = hookIndex
-
-  hookIndex++
-
-  return states[currrentIndex]
+  // const currrentIndex = hookIndex
+  // hookIndex++
+  // return states[currrentIndex]
+  return states[hookIndex++] // 等价于上面三行
 }
 
 export const useImperativeHandle = (ref, dataFactory) => {
@@ -100,8 +97,9 @@ export const useMemo = (memoFn, deps) => {
   // 第一次调用或者传入的 deps 发生变化，那么需要执行 memoFn
   if (!states[hookIndex] || deps.some((item, index) => item !== preDeps[index])) {
     const newData = memoFn()
-    states[hookIndex] = [newData, deps]
-    hookIndex++
+    // states[hookIndex] = [newData, deps]
+    // hookIndex++
+    states[hookIndex++] = [newData, deps] // 等价于上面两行
     return newData
   } else {
     hookIndex++
@@ -114,8 +112,9 @@ export const useCallback = (callbackFn, deps) => {
 
   // 第一次调用或者传入的 deps 发生变化
   if (!states[hookIndex] || deps.some((item, index) => item!== preDeps[index])) {
-    states[hookIndex] = [callbackFn, deps]
-    hookIndex++
+    // states[hookIndex] = [callbackFn, deps]
+    // hookIndex++
+    states[hookIndex++] = [callbackFn, deps] // 等价于上面两行
     return callbackFn
   } else {
     hookIndex++
