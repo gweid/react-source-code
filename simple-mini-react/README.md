@@ -220,7 +220,12 @@ diff 比对，分为（实际上，类组件和函数组件最终都会是原生
 - 实现 useState
   - 注意点：从根节点开始更新
 - 实现 useReducer
-- 实现 useEffect
+- 实现 useEffect 和 useLayoutEffect
+  - useEffect 会在渲染的内容更新到 DOM 上后执行，不会阻塞 DOM 的更新
+    - 使用 setTimeout 模拟宏任务
+  - useLayoutEffect 会在渲染的内容更新到 DOM 上之前执行，会阻塞 DOM 的更新
+    - queueMicrotask：用于将微任务加入微任务队列，微任务不会让出主线程​，会阻塞渲染，直到队列清空
+  - js 任务执行顺序：同步任务 --> 微任务 --> 宏任务
 
 
 

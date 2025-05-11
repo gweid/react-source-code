@@ -3,7 +3,9 @@
 // import ReactDOM from 'react-dom/client'; // react18.x 版本
 import React, {
   useState,
-  useReducer
+  useReducer,
+  useEffect,
+  useLayoutEffect,
 } from './mini-react/react';
 import ReactDOM from './mini-react/react-dom';
  
@@ -528,29 +530,56 @@ const root = document.getElementById('root');
 
 
 // ----------------------- useReducer -----------------------
+// function MyFuncCom() {
+//   const reducer = (state, action) => {
+//     switch(action.type) {
+//       case 'ADD_COUNT':
+//         return {
+//           ...state,
+//           count: state.count + 1
+//         }
+//       default:
+//         return state
+//     }
+//   }
+
+//   const [state, dispatch] = useReducer(reducer, { count: 100 })
+
+//   return (
+//     <div>
+//       <div>{state.count}</div>
+//       <button
+//         onClick={() => {dispatch({ type: 'ADD_COUNT' })}}
+//       >
+//         加加
+//       </button>
+//     </div>
+//   )
+// }
+
+// ReactDOM.render(<MyFuncCom />, root);
+
+
+// ----------------------- useEffect -----------------------
 function MyFuncCom() {
-  const reducer = (state, action) => {
-    switch(action.type) {
-      case 'ADD_COUNT':
-        return {
-          ...state,
-          count: state.count + 1
-        }
-      default:
-        return state
-    }
+  const [count, setCount] = useState(100)
+
+  const handleAdd = () => {
+    setCount(count + 1)
   }
 
-  const [state, dispatch] = useReducer(reducer, { count: 100 })
+  useEffect(() => {
+    console.log('useEffect')
+  }, [count])
+
+  useLayoutEffect(() => {
+    console.log('useLayoutEffect')
+  }, [count])
 
   return (
     <div>
-      <div>{state.count}</div>
-      <button
-        onClick={() => {dispatch({ type: 'ADD_COUNT' })}}
-      >
-        加加
-      </button>
+      <div>{count}</div>
+      <button onClick={handleAdd}>加加</button>
     </div>
   )
 }

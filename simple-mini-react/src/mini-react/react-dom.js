@@ -141,6 +141,11 @@ const createDOM = (VNode) => {
 const mountArray = (VNode, parent) => {
   if (!isTypeOf(VNode, 'Array')) return;
   VNode.forEach((child, index) => {
+    // 如果当前节点不存在，直接删除
+    if (!VNode[index]) {
+      VNode.splice(index, 1)
+      return
+    }
     // 这个在 updateChildren 中进行 diff 的时候会用到
     child && (child.index = index)
     mount(child, parent)
