@@ -77,3 +77,13 @@ export const useLayoutEffect = (effectFn, deps = []) => {
 
   hookIndex++
 }
+
+export const useRef = (initValue) => {
+  states[hookIndex] = states[hookIndex] || { current: initValue }
+
+  const currrentIndex = hookIndex
+
+  hookIndex++
+
+  return states[currrentIndex]
+}

@@ -6,6 +6,7 @@ import React, {
   useReducer,
   useEffect,
   useLayoutEffect,
+  useRef,
 } from './mini-react/react';
 import ReactDOM from './mini-react/react-dom';
  
@@ -560,26 +561,44 @@ const root = document.getElementById('root');
 // ReactDOM.render(<MyFuncCom />, root);
 
 
-// ----------------------- useEffect -----------------------
-function MyFuncCom() {
-  const [count, setCount] = useState(100)
+// ----------------------- useEffect 和 useLayoutEffect -----------------------
+// function MyFuncCom() {
+//   const [count, setCount] = useState(100)
 
-  const handleAdd = () => {
-    setCount(count + 1)
+//   const handleAdd = () => {
+//     setCount(count + 1)
+//   }
+
+//   useEffect(() => {
+//     console.log('useEffect')
+//   }, [count])
+
+//   useLayoutEffect(() => {
+//     console.log('useLayoutEffect')
+//   }, [count])
+
+//   return (
+//     <div>
+//       <div>{count}</div>
+//       <button onClick={handleAdd}>加加</button>
+//     </div>
+//   )
+// }
+
+// ReactDOM.render(<MyFuncCom />, root);
+
+
+// ----------------------- useRef -----------------------
+function MyFuncCom() {
+  const divRef = useRef(null)
+
+  const handleGetRef = () => {
+    console.log(divRef.current)
   }
 
-  useEffect(() => {
-    console.log('useEffect')
-  }, [count])
-
-  useLayoutEffect(() => {
-    console.log('useLayoutEffect')
-  }, [count])
-
   return (
-    <div>
-      <div>{count}</div>
-      <button onClick={handleAdd}>加加</button>
+    <div ref={divRef}>
+      <button onClick={handleGetRef}>获取ref</button>
     </div>
   )
 }
