@@ -305,8 +305,7 @@ fiber 是一种数据结构，通过 ​​child​​、​​sibling​​ 和
 
 React Fiber 的双缓存策略是一种优化渲染性能的核心机制，通过维护两棵 Fiber 树（current 和 workInProgress）实现无缝的 UI 更新：
 - current：当前屏幕上显示的 UI，每个 Fiber 节点通过 stateNode 关联真实 DOM
-- workInProgress：正在构建的新 UI 树，两棵树通过 alternate 属性互相引用
-当 workInProgress 构建完成后，会原子性地替换 current，确保 UI 的一致性
+- workInProgress：正在构建的新 UI 树，两棵树通过 alternate 属性互相引用。当 workInProgress 构建完成后，会原子性地替换 current，确保 UI 的一致性
 
 
 
