@@ -23,4 +23,4 @@ React18.3.1 的核心源码文件
 ## 手写 mini-react 篇
 
 
-[手写 React](./simple-mini-react/README.md)
+[实现简单版 react](./simple-mini-react/README.md)
