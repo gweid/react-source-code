@@ -12,7 +12,7 @@ react18-core/
   │   ├── react-reconciler              // react 协调器
   │   ├── scheduler                     // 调度器
   │   ├── react-dom-bindings            // react-dom 绑定
-  │   ├── share                         // 公共代码
+  │   ├── shared                        // 公共代码
   │   └── index.jsx
 ```
 
@@ -115,7 +115,8 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 ### 初始化渲染
 
-- 实现 jsxDev
+- 实现 jsxDEV
+  - jsxDEV 作用：创建虚拟 DOM
 - 实现 createRoot
 - render 函数阶段划分
 - 实现 beginWork、completeWork、commitWork
