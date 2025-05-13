@@ -13,7 +13,7 @@ react18-core/
   │   ├── scheduler                     // 调度器
   │   ├── react-dom-bindings            // react-dom 绑定
   │   ├── shared                        // 公共代码
-  │   └── index.jsx
+  │   └── index.jsx                     // 调试代码
 ```
 
 
@@ -22,44 +22,39 @@ react18-core/
 
 
 
-### fiber 架构的设计理念
+### Fiber 架构的设计理念
 
-#### fiber
+#### Fiber
 
-fiber 架构之前，react 基于堆栈的递归调和算法（dom diff），这种算法在进行虚拟 DOM 比较的时候，可能会阻塞页面主线程，导致页面渲染以及用户体验差。为了解决这个问题，引入了 fiber 架构。
+Fiber 架构之前，react 基于堆栈的递归调和算法（dom diff），这种算法在进行虚拟 DOM 比较的时候，可能会阻塞页面主线程，导致页面渲染以及用户体验差。为了解决这个问题，引入了 Fiber 架构。
 
-fiber 架构是 react 为解决性能问题和提升调度能力而引入的一种新的内部实现机制。它主要通过重新组织渲染过程，将渲染工作分解为更小的任务单元，并允许这些任务在必要时被中断和恢复，从而优化了 React 的更新机制。
+Fiber 架构是 react 为解决性能问题和提升调度能力而引入的一种新的内部实现机制。它主要通过重新组织渲染过程，将渲染工作分解为更小的任务单元，并允许这些任务在必要时被中断和恢复，从而优化了 React 的更新机制。
 
 Fiber 通过任务分片、优先级调度和可中断渲染，使 React 能够高效处理复杂应用场景。
 
 
 
-fiber 是一种数据结构，通过 ​​child​​、​​sibling​​ 和 ​​return​​ 指针构成单链表树形结构：
-- child​​：指向第一个子节点
-- sibling​​：指向下一个兄弟节点
-- return​​：指向父节点（用于回溯）
+Fiber 是一种数据结构，在代码中体现为一个对象，这个对象包括很多属性，fiber 树关键属性如下：
 
-
-
-**fiber 树关键属性如下**：
+![](../imgs/img4.png)
 
 ```js
 {
-  type: 'div' | FunctionComponent, // 节点类型（DOM 标签或组件）
-  key: string | null,              // 唯一标识（用于 Diff 算法）
-  stateNode: DOM节点或组件实例,     // 关联的真实 DOM 或组件实例
-
-  child: Fiber | null,             // 第一个子节点
-  sibling: Fiber | null,           // 下一个兄弟节点
-  return: Fiber | null,            // 父节点
-
-  alternate: Fiber | null,         // 指向另一棵树中的对应节点（双缓存）
-  effectTag: number,               // 标记更新类型（如插入、删除）
-  memoizedState: any,              // 当前状态（如 Hooks 链表）
-  pendingProps: any,              // 待处理的 props
-  memoizedProps: any,             // 当前生效的 props
-  updateQueue: UpdateQueue,        // 状态更新队列
-  lanes: number,                   // 调度优先级
+  this.tag = tag                     // 标记 Fiber 节点的类型，用于快速区分节点类型的标识
+  this.key = key                     // 唯一标识（用于 Diff 算法）
+  this.type = null                   // 元素的具体类型，用于创建节点或组件的类型信息
+  this.stateNode = null              // 关联真实 DOM 或组件实例
+  this.child = null                  // 第一个子节点
+  this.sibling = null                // 下一个兄弟节点
+  this.return = null                 // 父节点
+  this.pendingProps = pendingProps   // 待生效的 props
+  this.memoizedProps = null          // 当前生效的 props
+  this.memoizedState = null          // 当前生效的状态
+  this.updateQueue = null            // 更新队列
+  this.flags = NoFlags               // 节点标记，比如是更新还是删除
+  this.subtreeFlags = NoFlags        // 子节点的标记，比如是更新或删除（优化作用，层层通知）
+  this.altername = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
+  this.index = 0                     // 表示同级节点中节点的位置索引
 }
 ```
 
@@ -117,7 +112,15 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 - 实现 jsxDEV
   - jsxDEV 作用：创建虚拟 DOM
-- 实现 createRoot
+  - jsxDEV 用于处理 key、ref、props 属性，虚拟 DOM 生成放到 ReactElement 函数中
+- 实现 createRoot。
+  react 18 引入的方法。ReactDOM.render 是在同步模式下执行的，组件更新和渲染都是同步执行，不能中断。createRoot 允许在并发模式下执行，并发模式允许 React 在渲染和更新组件时利用时间切片，使得渲染过程是可中断的，从而提高应用程序的响应性和性能
+  - createRoot 中调用 createContainer 创建 Fiber 节点，以及返回 new ReactDOMRoot
+  - ReactDOMRoot 的 prototype 上 挂载 render 函数。render 函数中调用 updateContainer，将虚拟 DOM 节点挂载到真实 DOM root 上
+  - createContainer 调用 createFiberRoot 创建 FiberRoot 并返回
+  - createFiberRoot 中通过 new FiberRootNode 创建 FiberRoot 和 createHostRootFiber 创建 RootFiber，并两者进行关联，最后通过 initializeUpdateQueue 初始化更新队列
+  - createHostRootFiber 调用 createFiber，createFiber 中通过 new FiberNode 创建 Fiber 节点并返回
+  - 使用二进制对节点状态进行标记，可以做到：极致的性能优化​、灵活的状态组合、​内存高效利用
 - render 函数阶段划分
 - 实现 beginWork、completeWork、commitWork
 
