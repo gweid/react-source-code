@@ -57,8 +57,11 @@ export const enqueueUpdate = (fiber, update) => {
     // 当 pending 为 null，代表第一次更新，update 自己指向自己，形成循环链表
     update.next = update
   } else {
-    // 不是第一次更新，将新的更新对象插入到循环链表中
+    // 不是第一次更新
+
+    // 将第一个更新放入到 update.next
     update.next = pending.next
+    // 将新的更新对象插入到循环链表中
     pending.next = update
   }
 
