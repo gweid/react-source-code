@@ -14,26 +14,33 @@ function ReactDOMRoot(internalRoot) {
 }
 
 /**
- * render方法，负责更新或渲染React组件树
- * @param {*} children 需要渲染的React元素或组件
+ * render 方法，负责更新或渲染 React 组件树
+ * @param {*} children 需要渲染的 React 元素或组件（虚拟 DOM）
  * 
  * 这里不用箭头函数，因为箭头函数的 this 指向的不是 ReactDOMRoot 构造函数
  */
 ReactDOMRoot.prototype.render = function(children) {
   const root = this._internalRoot
 
-  // 将虚拟 DOM 节点挂载到真实 DOM root 上
-  // 这里的 root 不完全是真实 DOM，而是经过 fiber 处理的
+  /**
+   * updateContainer 就是整个渲染的入口
+   * 
+   * 流程：虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载
+   * 
+   * children：虚拟 DOM
+   * root：不完全是真实 DOM，而是经过处理的 FiberRoot
+   */
   updateContainer(children, root)
 }
 
 /**
- * 创建 fiberRoot
+ * 创建 FiberRoot
  * @param {*} container 真实 DOM （root根节点）节点
- * @returns 
+ * @returns FiberRoot
  */
 export const createRoot = (container) => {
   // 根据真实 DOM （root根节点）节点创建 Fiber 树的根节点
+  // root 是 FiberRoot，root.current 是 RootFiber
   const root = createContainer(container)
 
   return new ReactDOMRoot(root)
