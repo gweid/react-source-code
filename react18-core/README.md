@@ -34,9 +34,11 @@ Fiber 通过任务分片、优先级调度和可中断渲染，使 React 能够�
 
 
 
-Fiber 是一种数据结构，在代码中体现为一个对象，这个对象包括很多属性，fiber 树关键属性如下：
+Fiber 是一种数据结构：
 
 ![](../imgs/img4.png)
+
+在代码中体现为一个对象，这个对象包括很多属性，fiber 树关键属性如下：
 
 ```js
 {
@@ -53,7 +55,7 @@ Fiber 是一种数据结构，在代码中体现为一个对象，这个对象�
   this.updateQueue = null            // 更新队列
   this.flags = NoFlags               // 节点标记，比如是更新还是删除
   this.subtreeFlags = NoFlags        // 子节点的标记，比如是更新或删除（优化作用，层层通知）
-  this.altername = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
+  this.alternate = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
   this.index = 0                     // 表示同级节点中节点的位置索引
 }
 ```
@@ -86,6 +88,15 @@ React Fiber 的双缓存策略是一种优化渲染性能的核心机制，通�
 
 
 
+为什么需要 workInProgress：
+
+- **​​跟踪进度​**​：在递归遍历中替代调用栈，避免堆栈溢出
+- **支持中断恢复**：在并发模式下，workInProgress 可保存当前状态，被中断后能继续处理
+- **双缓存优化​​**：通过 workInProgress 和 current 两棵树对比，最小化 DOM 操作
+
+
+
+
 双缓存策略通过内存计算和原子替换，实现了高效、流畅的 UI 更新，是 React 高性能渲染的基石
 
 
@@ -112,36 +123,59 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 - 实现 jsxDEV
   - jsxDEV 作用：创建虚拟 DOM
-  - jsxDEV 用于处理 key、ref、props 属性，虚拟 DOM 生成放到 ReactElement 函数中
+  - jsxDEV：
+    - 处理 key、ref、props 属性，
+    - 调用 ReactElement 生成虚拟 DOM
+    - 虚拟 DOM 生成抽离到 ReactElement 函数中，便于复用
   
 - 实现 createRoot
   
   > react 18 引入的方法。ReactDOM.render 是在同步模式下执行的，组件更新和渲染都是同步执行，不能中断。createRoot 允许在并发模式下执行，并发模式允许 React 在渲染和更新组件时利用时间切片，使得渲染过程是可中断的，从而提高应用程序的响应性和性能
   
-  - createRoot 中调用 createContainer 创建 Fiber 节点，以及返回 new ReactDOMRoot
-  - ReactDOMRoot 的 prototype 上 挂载 render 函数。render 函数中调用 updateContainer，将虚拟 DOM 节点挂载到真实 DOM root 上
-  - createContainer 调用 createFiberRoot 创建 FiberRoot 并返回
-  - createFiberRoot 中通过 new FiberRootNode 创建 FiberRoot 和 createHostRootFiber 创建 RootFiber，并两者进行关联，最后通过 initializeUpdateQueue 初始化更新队列
-  - createHostRootFiber 调用 createFiber，createFiber 中通过 new FiberNode 创建 Fiber 节点并返回
-  - 使用二进制对节点状态进行标记，可以做到：极致的性能优化​、灵活的状态组合、​内存高效利用
-  
+  - createRoot：
+    - 调用 createContainer 创建 FiberRoot 节点
+    - createContainer 调用 createFiberRoot 创建 FiberRoot 并返回
+    - 通过 new ReactDOMRoot 进一步封装处理 FiberRoot 并返回
+  - ReactDOMRoot：
+    - 在 ReactDOMRoot 实例的 prototype 上 挂载 render 函数。
+    - render 函数中调用 updateContainer，实现【虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载】
+  - createFiberRoot：
+    - 通过 new FiberRootNode 创建 FiberRoot
+    - 通过 createHostRootFiber 函数创建 RootFiber
+    - 将 FiberRoot 和 RootFiber 进行关联
+    - 最后通过 initializeUpdateQueue 函数初始化更新队列
+  - createHostRootFiber 调用 createFiber，createFiber 中通过 new FiberNode 创建 RootFiber 节点并返回
+  - FiberNode 中使用二进制对节点状态进行标记，可以做到：极致的性能优化​、灵活的状态组合、​内存高效利用
+
 - 实现 render 函数
   > 渲染阶段：渲染阶段又可以分为 beginWork 和 completeWork 两个阶段
   > 提交阶段：提交阶段对应着 commitWork
   > 
   >
   >
-  > 原始版本 react 实际上就是把虚拟 DOM 转化为真实 DOM；在Fiber架构下，变成了 虚拟 DOM->Fiber 树->真实 DOM。多了一层Fiber。虚拟 DOM 转化为 Fiber 树，可以认为就是 beginWork，Fiber 树转化真实 DOM 就是completeWork，转化为真实 DOM 之后挂载到页面，就是commitWork
+  > 原始版本 react 实际上就是把虚拟 DOM 转化为真实 DOM；在Fiber架构下，变成了 虚拟 DOM --> Fiber 树 --> 真实 DOM。多了一层Fiber。虚拟 DOM 转化为 Fiber 树，可以认为就是 beginWork，Fiber 树转化真实 DOM 就是completeWork，转化为真实 DOM 之后挂载到页面，就是commitWork
   >
   > 
   >
   > Fiber 本身包括了虚拟 DOM 在内的很多信息，这些丰富的信息能够支持 Fiber 在执行任务的过程中被中断和恢复。beginWork 和 completeWork 其实就是就是在执行 Fiber 相关任务：虚拟 DOM 转化为 Fiber，Fiber 转化为真实 DOM。但是 Fiber 转化为真实 DOM 后挂载到页面的这个过程是不可以中断的。也就是 Fiber 内部怎么运行都可以，但是涉及到和页面真实发生关系的时候是不可以中断的。这也就是区分为渲染阶段和提交阶段的原因。也就是说渲染阶段可以中断恢复，提交阶段不可以
 
   - render 函数中调用 updateContainer 函数，实现 虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载
-  - updateContainer 中通过 createUpdate 创建更新对象，将虚拟 DOM 保存到更新对象 payload 属性中；通过 enqueueUpdate 将更新对象加入到 RootFiber.updateQueue（更新队列）中，这里面通过构造单向循环列表实现
+  - updateContainer 函数：
+    - 中通过 createUpdate 创建更新对象 update，将虚拟 DOM 保存到更新对象的 payload 属性中；
+    - 通过 enqueueUpdate 将更新对象加入到 RootFiber.updateQueue（更新队列）中，这里面通过构造单向循环列表实现
   - 最后，render 函数调用 schedulerUpdateOnFiber 执行调度更新
 
-- 实现 beginWork、completeWork、commitWork
+- 实现 schedulerUpdateOnFiber：包含了：beginWork、completeWork、commitWork 三个阶段
+  - schedulerUpdateOnFiber 函数：
+    - 调用 ensureRootIsScheduled，这里面通过调度器 scheduleCallback 执行 performConcurrentWorkOnRoot 函数。
+    - performConcurrentWorkOnRoot 通过 bind 绑定参数 root，确保即使在异步调度执行时，也能访问到正确的 root
+  - performConcurrentWorkOnRoot 函数是并发渲染的核心函数，调度执行具体的渲染工作：
+    - 同步渲染阶段：调用 renderRootSync，这里面会：
+      - 调用 prepareFreshStack 函数，创建 workInProgress，实现双缓存
+      - 调用 workLoopSync 函数，同步一次性处理 Fiber 树，深度递归遍历。调用 beginWork 实现虚拟 DOM 转化为 Fiber 树
+        深度递归遍历处理 Fiber 过程：
+        ![](../imgs/img5.png)
+    - 最后调用 commitRoot 进入挂载阶段
 
 
 

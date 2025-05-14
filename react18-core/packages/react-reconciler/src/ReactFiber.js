@@ -21,7 +21,7 @@ export function FiberNode(tag, pendingProps, key) {
   this.updateQueue = null            // 更新队列
   this.flags = NoFlags               // 节点标记，比如是更新还是删除
   this.subtreeFlags = NoFlags        // 子节点的标记，比如是更新还是删除（优化作用，层层通知）
-  this.altername = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
+  this.alternate = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
   this.index = 0                     // 表示同级节点中节点的位置索引
 }
 
@@ -42,4 +42,38 @@ export const createFiber = (tag, pendingProps, key) => {
  */
 export const createHostRootFiber = () => {
   return createFiber(HostRoot, null, null)
+}
+
+/**
+ * 基于当前屏幕 UI 对应的 Fiber 树和新的属性创建一个新的正在工作的 Fiber 树（双缓存）
+ * @param {*} current 当前屏幕 UI 对应的 Fiber 树
+ * @param {*} pendingProps 新的属性
+ * @returns 新的正在工作的 Fiber 树
+ */
+export const createWorkInProgress = (current, pendingProps) => {
+  let workInProgress = current.alternate
+
+  if (workInProgress === null) {
+    // workInProgress 为 null，代表初始化阶段
+    workInProgress = createFiber(current.tag, pendingProps, current.key)
+
+    workInProgress.stateNode = current.stateNode
+    workInProgress.alternate = current
+    current.alternate = workInProgress
+  } else {
+    // 更新阶段
+    workInProgress.pendingProps = pendingProps
+    workInProgress.flags = NoFlags
+    workInProgress.subtreeFlags = NoFlags
+  }
+
+  workInProgress.type = current.type
+  workInProgress.child = current.child
+  workInProgress.sibling = current.sibling
+  workInProgress.memoizedProps = current.memoizedProps
+  workInProgress.memoizedState = current.memoizedState
+  workInProgress.updateQueue = current.updateQueue
+  workInProgress.index = current.index
+
+  return workInProgress
 }
