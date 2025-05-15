@@ -121,61 +121,129 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 ### 初始化渲染
 
-- 实现 jsxDEV
-  - jsxDEV 作用：创建虚拟 DOM
-  - jsxDEV：
-    - 处理 key、ref、props 属性，
-    - 调用 ReactElement 生成虚拟 DOM
-    - 虚拟 DOM 生成抽离到 ReactElement 函数中，便于复用
-  
-- 实现 createRoot
-  
-  > react 18 引入的方法。ReactDOM.render 是在同步模式下执行的，组件更新和渲染都是同步执行，不能中断。createRoot 允许在并发模式下执行，并发模式允许 React 在渲染和更新组件时利用时间切片，使得渲染过程是可中断的，从而提高应用程序的响应性和性能
-  
-  - createRoot：
-    - 调用 createContainer 创建 FiberRoot 节点
-    - createContainer 调用 createFiberRoot 创建 FiberRoot 并返回
-    - 通过 new ReactDOMRoot 进一步封装处理 FiberRoot 并返回
-  - ReactDOMRoot：
-    - 在 ReactDOMRoot 实例的 prototype 上 挂载 render 函数。
-    - render 函数中调用 updateContainer，实现【虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载】
-  - createFiberRoot：
-    - 通过 new FiberRootNode 创建 FiberRoot
-    - 通过 createHostRootFiber 函数创建 RootFiber
-    - 将 FiberRoot 和 RootFiber 进行关联
-    - 最后通过 initializeUpdateQueue 函数初始化更新队列
-  - createHostRootFiber 调用 createFiber，createFiber 中通过 new FiberNode 创建 RootFiber 节点并返回
-  - FiberNode 中使用二进制对节点状态进行标记，可以做到：极致的性能优化​、灵活的状态组合、​内存高效利用
 
-- 实现 render 函数
-  > 渲染阶段：渲染阶段又可以分为 beginWork 和 completeWork 两个阶段
-  > 提交阶段：提交阶段对应着 commitWork
-  > 
-  >
-  >
-  > 原始版本 react 实际上就是把虚拟 DOM 转化为真实 DOM；在Fiber架构下，变成了 虚拟 DOM --> Fiber 树 --> 真实 DOM。多了一层Fiber。虚拟 DOM 转化为 Fiber 树，可以认为就是 beginWork，Fiber 树转化真实 DOM 就是completeWork，转化为真实 DOM 之后挂载到页面，就是commitWork
-  >
-  > 
-  >
-  > Fiber 本身包括了虚拟 DOM 在内的很多信息，这些丰富的信息能够支持 Fiber 在执行任务的过程中被中断和恢复。beginWork 和 completeWork 其实就是就是在执行 Fiber 相关任务：虚拟 DOM 转化为 Fiber，Fiber 转化为真实 DOM。但是 Fiber 转化为真实 DOM 后挂载到页面的这个过程是不可以中断的。也就是 Fiber 内部怎么运行都可以，但是涉及到和页面真实发生关系的时候是不可以中断的。这也就是区分为渲染阶段和提交阶段的原因。也就是说渲染阶段可以中断恢复，提交阶段不可以
 
-  - render 函数中调用 updateContainer 函数，实现 虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载
-  - updateContainer 函数：
-    - 中通过 createUpdate 创建更新对象 update，将虚拟 DOM 保存到更新对象的 payload 属性中；
-    - 通过 enqueueUpdate 将更新对象加入到 RootFiber.updateQueue（更新队列）中，这里面通过构造单向循环列表实现
-  - 最后，render 函数调用 schedulerUpdateOnFiber 执行调度更新
+#### 实现 jsxDEV
 
-- 实现 schedulerUpdateOnFiber：包含了：beginWork、completeWork、commitWork 三个阶段
-  - schedulerUpdateOnFiber 函数：
-    - 调用 ensureRootIsScheduled，这里面通过调度器 scheduleCallback 执行 performConcurrentWorkOnRoot 函数。
-    - performConcurrentWorkOnRoot 通过 bind 绑定参数 root，确保即使在异步调度执行时，也能访问到正确的 root
-  - performConcurrentWorkOnRoot 函数是并发渲染的核心函数，调度执行具体的渲染工作：
-    - 同步渲染阶段：调用 renderRootSync，这里面会：
-      - 调用 prepareFreshStack 函数，创建 workInProgress，实现双缓存
-      - 调用 workLoopSync 函数，同步一次性处理 Fiber 树，深度递归遍历。调用 beginWork 实现虚拟 DOM 转化为 Fiber 树
-        深度递归遍历处理 Fiber 过程：
-        ![](../imgs/img5.png)
-    - 最后调用 commitRoot 进入挂载阶段
+> jsxDEV 作用：创建虚拟 DOM
+
+
+
+- jsxDEV：
+  - 处理 key、ref、props 属性，
+  - 调用 ReactElement 生成虚拟 DOM
+  - 虚拟 DOM 生成抽离到 ReactElement 函数中，便于复用
+
+
+
+#### 实现 createRoot
+
+> react 18 引入的方法。ReactDOM.render 是在同步模式下执行的，组件更新和渲染都是同步执行，不能中断。createRoot 允许在并发模式下执行，并发模式允许 React 在渲染和更新组件时利用时间切片，使得渲染过程是可中断的，从而提高应用程序的响应性和性能
+
+
+
+- createRoot：
+  - 调用 createContainer 创建 FiberRoot 节点
+  - createContainer 调用 createFiberRoot 创建 FiberRoot 并返回
+  - 通过 new ReactDOMRoot 进一步封装处理 FiberRoot 并返回
+- ReactDOMRoot：
+  - 在 ReactDOMRoot 实例的 prototype 上 挂载 render 函数。
+  - render 函数中调用 updateContainer，实现【虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载】
+- createFiberRoot：
+  - 通过 new FiberRootNode 创建 FiberRoot
+  - 通过 createHostRootFiber 函数创建 RootFiber
+  - 将 FiberRoot 和 RootFiber 进行关联
+  - 最后通过 initializeUpdateQueue 函数初始化更新队列
+- createHostRootFiber 调用 createFiber，createFiber 中通过 new FiberNode 创建 RootFiber 节点并返回
+- FiberNode 中使用二进制对节点状态进行标记，可以做到：极致的性能优化​、灵活的状态组合、​内存高效利用
+
+
+
+#### 实现 render 函数
+
+> 渲染阶段：渲染阶段又可以分为 beginWork 和 completeWork 两个阶段
+> 提交阶段：提交阶段对应着 commitWork
+> 
+>
+>
+> 原始版本 react 实际上就是把虚拟 DOM 转化为真实 DOM；在Fiber架构下，变成了 虚拟 DOM --> Fiber 树 --> 真实 DOM。多了一层Fiber。虚拟 DOM 转化为 Fiber 树，可以认为就是 beginWork 阶段；Fiber 树转化真实 DOM 就是 completeWork 阶段；将真实 DOM 挂载到页面，就是 commitWork 阶段
+>
+> 
+>
+> Fiber 本身包括了虚拟 DOM 在内的很多信息，这些丰富的信息能够支持 Fiber 在执行任务的过程中被中断和恢复。beginWork 和 completeWork 其实就是就是在执行 Fiber 相关任务：虚拟 DOM 转化为 Fiber，Fiber 转化为真实 DOM。但是 Fiber 转化为真实 DOM 后挂载到页面的这个过程是不可以中断的。也就是 Fiber 内部怎么运行都可以，但是涉及到和页面真实发生关系的时候是不可以中断的。这也就是区分为渲染阶段和提交阶段的原因。也就是说渲染阶段可以中断恢复，提交阶段不可以
+
+
+
+- render 函数中调用 updateContainer 函数，实现 虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载
+- updateContainer 函数：
+  - 中通过 createUpdate 创建更新对象 update，将虚拟 DOM 保存到更新对象的 payload 属性中；
+  - 通过 enqueueUpdate 将更新对象加入到 RootFiber.updateQueue（更新队列）中，这里面通过构造单向循环列表实现
+- 最后，render 函数调用 schedulerUpdateOnFiber 执行调度更新
+
+
+
+#### schedulerUpdateOnFiber
+
+> schedulerUpdateOnFiber 是调度更新的入口，流程贯穿了：beginWork、completeWork、commitWork 三个阶段
+
+
+
+- schedulerUpdateOnFiber 函数：
+  - 调用 ensureRootIsScheduled，这里面通过调度器 scheduleCallback 执行 performConcurrentWorkOnRoot 函数。
+  - performConcurrentWorkOnRoot 通过 bind 绑定参数 root，确保即使在异步调度执行时，也能访问到正确的 root
+- performConcurrentWorkOnRoot 函数是并发渲染的核心函数，调度执行具体的渲染工作：
+  - 同步渲染阶段：调用 renderRootSync，这里面会：
+    - 调用 prepareFreshStack 函数，创建 workInProgress，实现双缓存
+    - 调用 workLoopSync 函数，同步循环一次性处理 Fiber 树，深度递归遍历。深度递归遍历处理 Fiber 过程：
+      ![](../imgs/img5.png)
+    - workLoopSync 中**循环调用** performUnitOfWork 处理单个 Fiber 节点，直到需要处理的 Fiber 节点为 null，结束循环。performUnitOfWork 核心：
+      - 调用 beginWork 将虚拟 DOM 转化为 Fiber 节点，并返回下一个子 Fiber 节点
+      - 调用 completeUnitOfWork 处理 Fiber 节点，将 Fiber 转化为真实 DOM，并回溯到父 Fiber 节点 
+  - 最后调用 commitRoot 进入挂载阶段
+
+
+
+#### beginWork 阶段
+
+> 核心作用：虚拟 DOM 转化为 Fiber 树
+
+
+
+- beginWork 中判断 workInProgress.tag，当是根 Fiber 时，执行 updateHostRoot；是原生标签时，执行 updateHostComponent
+  - updateHostRoot：
+    - 调用 processUpdateQueue，根据旧状态和更新队列中的更新计算最新的状态，得到新的 memoizedState，里面包含新的虚拟 DOM 
+    - 调用 reconcileChildren 函数协调子元素，这个是 beginWork 的核心，会调用 createChildReconciler 将新的虚拟 DOM 转换为新的 Fiber，并返回第一个子 Fiber
+  - updateHostComponent：调用 reconcileChildren 函数协调子元素，将新的虚拟 DOM 转换为新的 Fiber，并返回第一个子 Fiber
+  - reconcileChildren 主要做的：
+    - 区分传入的 虚拟 DOM 是单个还是数组
+    - 当是单个时，调用 reconcileSingleElement 将新的虚拟 DOM 转换为新的 Fiber
+    - 当时多个时，调用 reconcileChildrenArray 将新的虚拟 DOM 转换为新的 Fiber，建立兄弟 Fiber 关系链表，并返回第一个 Fiber
+    - 虚拟 DOM 转换成 Fiber 的过程中，会给虚拟 DOM 的 index 赋值，相当于标记位置索引
+  - 最后，beginWork 处理完成后，返回下一个子 Fiber 节点，继续进入循环，直到子 Fiber 节点为 null
+
+
+
+
+#### completeWork 阶段
+
+> 核心作用：将 Fiber 树转化为真实 DOM
+
+
+
+- 
+- 
+
+
+
+
+#### commitWork 阶段
+
+> 核心作用：将真实 DOM 挂载到页面上，不可中断
+
+
+
+- 
+- 
 
 
 

@@ -1,4 +1,4 @@
-import { HostRoot } from './ReactWorkTags'
+import { HostRoot, HostComponent, IndeterminateComponent } from './ReactWorkTags'
 import { NoFlags } from './ReactFiberFlags'
 
 /**
@@ -76,4 +76,46 @@ export const createWorkInProgress = (current, pendingProps) => {
   workInProgress.index = current.index
 
   return workInProgress
+}
+
+/**
+ * 根据虚拟 DOM 创建 Fiber 节点
+ * @param {*} element 虚拟 DOM
+ * @returns Fiber 节点
+ */
+export const createFiberFromElement = (element) => {
+  const { type, key, props: pendingProps } = element
+
+  return createFiberFromTypeAndProps(type, key, pendingProps)
+}
+
+/**
+ * 根据类型和属性创建 Fiber 节点
+ * @param {*} type 类型
+ * @param {*} key 唯一标识
+ * @param {*} pendingProps 新属性
+ * @returns Fiber 节点
+ */
+const createFiberFromTypeAndProps = (type, key, pendingProps) => {
+  // 一开始，不知道 tag 是什么类型
+  let tag = IndeterminateComponent
+
+  // 原生标签
+  if (typeof type === 'string') {
+    tag = HostComponent
+  }
+
+  const fiber = createFiber(tag, pendingProps, key)
+  fiber.type = type
+
+  return fiber
+}
+
+/**
+ * 创建一个文本类型的 Fiber 节点
+ * @param {*} content 文本内容
+ * @returns 文本类型的 Fiber 节点
+ */
+export const createFiberFromText = (content) => {
+  return createFiber(HostText, content, null);
 }

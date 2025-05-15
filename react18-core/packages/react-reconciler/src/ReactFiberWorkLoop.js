@@ -73,16 +73,18 @@ const workLoopSync = () => {
 const performUnitOfWork = (unitOfWork) => {
   // current 是当前屏幕上显示的 Fiber 树（对应真实 DOM），unitOfWork 是新的正在工作的 Fiber 树
   const current = unitOfWork.alternate
+  // 返回的 next 是 子 Fiber 节点
   const next = beginWork(current, unitOfWork)
 
   // 经过 beginWork 处理后，可以将 【待生效的 props】 赋值给 【当前生效的 props】
   unitOfWork.memoizedProps = unitOfWork.pendingProps
 
-  // TODO：为了避免死循环，暂时将 workInProgress 置为 null，后续需要删除
-  // workInProgress = null
+  // TODO：为了避免死循环，暂时将 workInProgress 先置为 null，后续需要删除
+  workInProgress = null
 
   if (next === null) {
-    // 没有子节点，说明已经处理完成，向上回溯到父节点
+    // 没有子节点，说明已经处理完成，内部调用 completeWork 将虚拟 DOM 转化为真实 DOM
+    // 并向上回溯到父节点
     completeUnitOfWork(unitOfWork)
   } else {
     // 有子节点，说明还没有处理完成，向下进入子节点

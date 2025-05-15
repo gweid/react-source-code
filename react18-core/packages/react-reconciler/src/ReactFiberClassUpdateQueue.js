@@ -1,3 +1,4 @@
+import assign from 'shared/assign'
 import { markUpdateLaneFromFiberToRoot } from './ReactFiberConcurrentUpdates'
 
 export const UpdateState = 0
@@ -16,7 +17,10 @@ export const initializeUpdateQueue = (fiber) => {
   fiber.updateQueue = queue
 }
 
-// 创建更新
+/**
+ * 创建更新对象
+ * @returns 更新对象
+ */
 export const createUpdate = () => {
   const update = {
     tag: UpdateState,
@@ -70,4 +74,63 @@ export const enqueueUpdate = (fiber, update) => {
 
   // 这个会返回 FiberRoot 节点
   return markUpdateLaneFromFiberToRoot(fiber)
+}
+
+/**
+ * 根据旧状态和更新队列中的更新计算最新的状态
+ * @param {*} workInProgress 需要计算新状态的 Fiber 节点
+ */
+export const processUpdateQueue = (workInProgress) => {
+  // 获取当前 Fiber 节点的更新队列
+  const queue = workInProgress.updateQueue
+  const pendingQueue = queue.shared.pending
+
+  // 如果有待处理的更新
+  if (pendingQueue !== null) {
+    // enqueueUpdate 创建更新队列使用了单向循环链表
+    // pending 指向最后一个更新，pending.next 指向第一个更新
+
+    // 取出最后一个更新
+    const lastPendingUpdate = pendingQueue
+    // 取出第一个更新
+    const firstPendingUpdate = lastPendingUpdate.next
+
+    // 处理好后，将 pending 指向 null，清空 pending 队列
+    queue.shared.pending = null
+
+    // 断开循环链表，准备处理更新
+    // 为什么需要断开循环链表？
+    // 环形链表：A → B → C → A，如果直接遍历环形链表而不断开：A → B → C → A → B → C → ...（无限循环）
+    // 断开循环链表：A → B → C → null，链表变为单向链表，不会无限循环
+    lastPendingUpdate.next = null
+
+    let nextState = workInProgress.memoizedState
+    let update = firstPendingUpdate
+
+    // 遍历链表更新队列，根据老状态和更新对象计算新状态
+    while (update) {
+      nextState = getStateFromUpdate(update, nextState)
+      update = update.next
+    }
+
+    // 更新 Fiber 的最终状态
+    workInProgress.memoizedState = nextState
+  }
+}
+
+/**
+ * 根据老状态和更新对象计算新状态
+ * @param {*} update 更新对象
+ * @param {*} prevState 老状态
+ * @returns 新状态
+ */
+const getStateFromUpdate = (update, prevState) => {
+  switch (update.tag) {
+    case UpdateState:
+      const { payload } = update
+
+      // 合并 prevState 和 payload 为新状态
+      // payload 中是 新的虚拟 DOM
+      return assign({}, prevState, payload)
+  }
 }
