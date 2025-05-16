@@ -172,7 +172,7 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 >
 > Fiber 本身包括了虚拟 DOM 在内的很多信息，这些丰富的信息能够支持 Fiber 在执行任务的过程中被中断和恢复。beginWork 和 completeWork 其实就是就是在执行 Fiber 相关任务：虚拟 DOM 转化为 Fiber，Fiber 转化为真实 DOM。但是 Fiber 转化为真实 DOM 后挂载到页面的这个过程是不可以中断的。也就是 Fiber 内部怎么运行都可以，但是涉及到和页面真实发生关系的时候是不可以中断的。这也就是区分为渲染阶段和提交阶段的原因。也就是说渲染阶段可以中断恢复，提交阶段不可以
 
-
+![](../imgs/img6.png)
 
 - render 函数中调用 updateContainer 函数，实现 虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载
 - updateContainer 函数：
@@ -197,8 +197,8 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
     - 调用 workLoopSync 函数，同步循环一次性处理 Fiber 树，深度递归遍历。深度递归遍历处理 Fiber 过程：
       ![](../imgs/img5.png)
     - workLoopSync 中**循环调用** performUnitOfWork 处理单个 Fiber 节点，直到需要处理的 Fiber 节点为 null，结束循环。performUnitOfWork 核心：
-      - 调用 beginWork 将虚拟 DOM 转化为 Fiber 节点，并返回下一个子 Fiber 节点
-      - 调用 completeUnitOfWork 处理 Fiber 节点，将 Fiber 转化为真实 DOM，并回溯到父 Fiber 节点 
+      - 调用 beginWork 将虚拟 DOM 转化为 Fiber 节点，并返回下一个子 Fiber 节点，没有就返回 null
+      - 调用 completeUnitOfWork 处理 Fiber 节点，将 Fiber 转化为真实 DOM，然后找兄弟 Fiber，没有就回溯到父 Fiber 节点 
   - 最后调用 commitRoot 进入挂载阶段
 
 
@@ -207,7 +207,18 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 > 核心作用：虚拟 DOM 转化为 Fiber 树
 
+![](../imgs/img8.png)
 
+右图为 beginWork 将虚拟 DOM 转化为 Fiber 的顺序：
+
+- A --> B1 --> B2 --> C1 --> C2 --> C3
+- D1 和 D2 并不会被转换，因为 到 C1 的时候，只会处理 C1 的兄弟节点。然后返回第一个子节点，就是 C1
+- C1 没有子节点，开始调用 completeWork 处理 C1、兄弟节点 C2，当 completeWork 处理到 C3 时，发现有子节点，那么先调用 beginWork 将子节点 D1、D2 转换为 虚拟 DOM，这里的核心就在：workInProgress 的赋值上
+- 所以 D1 和 D2 是在 completeWork 阶段才会被转换为 Fiber
+
+
+
+beginWork 核心：
 
 - beginWork 中判断 workInProgress.tag，当是根 Fiber 时，执行 updateHostRoot；是原生标签时，执行 updateHostComponent
   - updateHostRoot：
@@ -228,10 +239,39 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 > 核心作用：将 Fiber 树转化为真实 DOM
 
+![](../imgs/img7.png)
+
+上图，右边的 Fiber 树，黄色线是 beginWork 顺序，蓝色线是 completeWork 顺序
+
+可以看到流程：
+
+- beginWork 处理完 C1、C2、C3 后，返回 C1，C1 没有子节点了，开始执行 completeWork
+- completeWork 从 C1 开始，到 C2，执行完 C2 后，跳到 C3，C3 中发现还有子节点还有有转 Fiber
+- 先调用 beginWork  将 C3 的 子节点转 Fiber，然后返回 D1，然后调用 completeWork 将 D1 转换为真实 DOM
+- 然后 completeWork 处理 D2，没有兄弟节点，回溯处理 C3
+- 处理完 C3 发现 C1、C2 已经处理过，继续回溯处理 B1，处理完 B1 处理兄弟 B2
+- B2 没有兄弟节点，回溯处理 A，后结束流程
 
 
-- 
-- 
+
+complateWork 核心：
+
+对不同 workInProgress.tag 类型做处理
+
+
+- 当是 HostRoot 类型，其实就是 react 挂载的 根节点 #root，所以不需要再创建 DOM，调用 bubbleProperties 将子节点的操作合并记录到 subtreeFlags 属性
+- 当是 HostComponent 类型
+  - 调用 createInstance 创建真实 DOM
+  - 调用 appendAllChildren 将所有子 DOM 追加到 父 DOM 上
+  - workInProgress.stateNode = instance，将真实 DOM 关联到 stateNode 属性
+  - 调用 finalizeInitialChildren 设置属性
+    - 设置样式
+    - 将文本转换为 DOM 节点
+    - 设置其它属性（例如 img 标签的 alt 等，这里不会包含 key 和 ref，因为在创建虚拟 DOM 就不会将它们放进 props）
+  - 调用 bubbleProperties 将子节点的操作合并记录到 subtreeFlags 属性
+- 当是 HostText
+  - createTextInstance 创建真实文本 DOM，并关联到 stateNode 属性
+  - 调用 bubbleProperties 将子节点的操作合并记录到 subtreeFlags 属性
 
 
 

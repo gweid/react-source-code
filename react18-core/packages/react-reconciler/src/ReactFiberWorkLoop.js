@@ -1,6 +1,7 @@
 import { scheduleCallback } from 'scheduler'
 import { createWorkInProgress } from './ReactFiber'
 import { beginWork } from './ReactFiberBeginWork'
+import { completeWork } from './ReactFiberCompleteWork'
 
 let workInProgress = null
 
@@ -84,7 +85,7 @@ const performUnitOfWork = (unitOfWork) => {
 
   if (next === null) {
     // 没有子节点，说明已经处理完成，内部调用 completeWork 将虚拟 DOM 转化为真实 DOM
-    // 并向上回溯到父节点
+    // 找兄弟 Fiber，如果没有兄弟 Fiber，向上回溯到父节点（遵循深度优先算法）
     completeUnitOfWork(unitOfWork)
   } else {
     // 有子节点，说明还没有处理完成，向下进入子节点
@@ -93,11 +94,32 @@ const performUnitOfWork = (unitOfWork) => {
 }
 
 /**
- * 没有需要处理的子节点，向上回溯到父节点
+ * 将 Fiber 树转换为真实 DOM
  * @param {*} unitOfWork 当前正在处理的 Fiber 节点的引用​
  */
 const completeUnitOfWork = (unitOfWork) => {
+  let completedWork = unitOfWork
 
+  // do...while：先执行一次循环体，再判断条件是否成立（至少执行一次）
+  // while：先判断条件是否成立，再执行循环体（可能一次也不执行）
+  do {
+    // 拿到老 Fiber
+    const current = completedWork.alternate
+    // 拿到新 Fiber 的父节点
+    const returnFiber = completedWork.return
+
+    // 将 Fiber 转换为 真实 DOM
+    completeWork(current, completedWork)
+
+    const siblingFiber = completedWork.sibling
+    if (siblingFiber !== null) {
+      workInProgress = siblingFiber
+      return
+    }
+
+    completedWork = returnFiber
+    workInProgress = completedWork
+  } while(completedWork !== null)
 }
 
 /**

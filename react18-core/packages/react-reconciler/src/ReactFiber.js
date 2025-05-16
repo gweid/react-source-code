@@ -1,4 +1,4 @@
-import { HostRoot, HostComponent, IndeterminateComponent } from './ReactWorkTags'
+import { HostRoot, HostComponent, HostText, IndeterminateComponent } from './ReactWorkTags'
 import { NoFlags } from './ReactFiberFlags'
 
 /**
@@ -20,7 +20,7 @@ export function FiberNode(tag, pendingProps, key) {
   this.memoizedState = null          // 当前生效的状态
   this.updateQueue = null            // 更新队列
   this.flags = NoFlags               // 节点标记，比如是更新还是删除
-  this.subtreeFlags = NoFlags        // 子节点的标记，比如是更新还是删除（优化作用，层层通知）
+  this.subtreeFlags = NoFlags        // 所有子节点的标记，比如是更新还是删除（优化作用，层层通知）
   this.alternate = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
   this.index = 0                     // 表示同级节点中节点的位置索引
 }

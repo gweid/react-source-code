@@ -48,50 +48,6 @@ yarn start:classic
 
 
 
-## React 核心
-
-- React 核心原理
-- React 事件与状态管理
-- React 架构
-
-
-
-### React 核心原理
-
-无论 React 怎么变化，总有一些东西是不会怎么变的：
-
-- 组件生命周期
-- 虚拟 DOM 的实现
-- Diff 算法
-- 组件渲染与更新
-- Hooks 机制
-
-
-
-### React 事件与状态管理
-
-主要是与用户交互相关的：
-
-- 事件代理机制
-- 自定义事件系统
-- steState 工作原理
-- 状态更新处理
-- props 与 state
-
-
-
-### React 架构
-
-这是 react 18 最重要的部分，相当于核心原理的具体实现；具体原理是不变的，具体实现是会变的：
-
-- Fiber 系统
-- Concurrent 模式
-- Lane 模型
-- 调度系统
-- 时间切片
-
-
-
 ## 实现基础版 react
 
 

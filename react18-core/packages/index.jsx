@@ -3,15 +3,29 @@
 // console.log(element);
 
 
-// ----------------------- 实现 createRoot -----------------------
+// ----------------------- 初始化渲染 -----------------------
 import { createRoot } from 'react-dom/client'
 
 const root = createRoot(document.getElementById('root'))
 
+const Com = () => {
+  return (
+    <div>组件</div>
+  )
+}
+
 const element = (
-  <div>
+  <div key='divKey'>
     <h1>Hello, world!</h1>
-    <div style={{ color: 'red' }}>你好</div>
+    <div style={{ color: 'red' }}>
+      你好
+      <p>p标签</p>
+    </div>
+    文本节点
+    <Com>
+      <span>组件的 children</span>
+    </Com>
+    <img src="" alt="空图片" />
   </div>
 )
 

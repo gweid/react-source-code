@@ -50,6 +50,7 @@ const createChildReconciler = (shouldTrackSideEffects) => {
     newFiber.index = newIdx
 
     if (shouldTrackSideEffects) {
+      // |= 是位运算符，用于添加标记，不会影响其他已有的标记
       newFiber.flags |= Placement
     }
 
