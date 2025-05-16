@@ -243,14 +243,14 @@ beginWork 核心：
 
 上图，右边的 Fiber 树，黄色线是 beginWork 顺序，蓝色线是 completeWork 顺序
 
-可以看到流程：
+completeWork 流程：
 
 - beginWork 处理完 C1、C2、C3 后，返回 C1，C1 没有子节点了，开始执行 completeWork
-- completeWork 从 C1 开始，到 C2，执行完 C2 后，跳到 C3，C3 中发现还有子节点还有有转 Fiber
+- completeWork 从 C1 开始（也就是 completeWork 是从第一个没有子节点的 Fiber 节点开始的），到 C2，执行完 C2 后，跳到 C3，C3 中发现还有子节点还没有转 Fiber
 - 先调用 beginWork  将 C3 的 子节点转 Fiber，然后返回 D1，然后调用 completeWork 将 D1 转换为真实 DOM
 - 然后 completeWork 处理 D2，没有兄弟节点，回溯处理 C3
 - 处理完 C3 发现 C1、C2 已经处理过，继续回溯处理 B1，处理完 B1 处理兄弟 B2
-- B2 没有兄弟节点，回溯处理 A，后结束流程
+- B2 没有兄弟节点也没有子节点，回溯处理 A，后结束流程
 
 
 
