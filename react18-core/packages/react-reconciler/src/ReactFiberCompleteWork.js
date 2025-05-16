@@ -84,7 +84,6 @@ const appendAllChildren = (parent, workInProgress) => {
   let node = workInProgress.child
 
   while (node) {
-    debugger
     if (node.tag === HostComponent || node.tag === HostText) {
       appendInitialChild(parent, node.stateNode)
     } else if (node.child !== null) {
