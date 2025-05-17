@@ -86,7 +86,7 @@ const performUnitOfWork = (unitOfWork) => {
   unitOfWork.memoizedProps = unitOfWork.pendingProps
 
   // TODO：为了避免死循环，暂时将 workInProgress 先置为 null，后续需要删除
-  workInProgress = null
+  // workInProgress = null
 
   if (next === null) {
     // 没有子节点，说明已经处理完成，内部调用 completeWork 将虚拟 DOM 转化为真实 DOM

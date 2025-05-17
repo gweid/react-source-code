@@ -1,7 +1,14 @@
-import { HostRoot, HostComponent, HostText } from './ReactWorkTags'
+import {
+  HostRoot,
+  HostComponent,
+  HostText,
+  IndeterminateComponent,
+  FunctionComponent
+} from './ReactWorkTags'
 import { processUpdateQueue } from './ReactFiberClassUpdateQueue'
 import { mountChildFibers, reconcileChildFibers } from './ReactChildFiber'
 import { shouldSetTextContent } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
+import { renderWithHooks } from './ReactFiberHooks'
 
 /**
  * 将虚拟 DOM 转换为 Fiber 节点
@@ -11,6 +18,8 @@ import { shouldSetTextContent } from 'react-dom-bindings/src/client/ReactDOMHost
  */
 export const beginWork = (current, workInProgress) => {
   switch (workInProgress.tag) {
+    case IndeterminateComponent:
+      return mountIndeterminateComponent(current, workInProgress, workInProgress.type)
     case HostRoot:
       return updateHostRoot(current, workInProgress)
     case HostComponent:
@@ -21,6 +30,28 @@ export const beginWork = (current, workInProgress) => {
     default:
       return null
   }
+}
+
+/**
+ * 更新函数组件的 Fiber 节点
+ * @param {*} current 当前屏幕上显示的内容对应的 Fiber 树
+ * @param {*} workInProgress 正在构建的 Fiber 树
+ * @param {*} Component 函数组件的函数 () => {}
+ * @returns 
+ */
+const mountIndeterminateComponent = (current, workInProgress, Component) => {
+  const props = workInProgress.pendingProps
+
+  const value = renderWithHooks(current, workInProgress, Component, props)
+
+  // 标记为函数类型 tag
+  workInProgress.tag = FunctionComponent
+
+  // 协调子节点，生成子 Fiber 树
+  reconcileChildren(current, workInProgress, value)
+
+  // 返回第一个子 Fiber 节点
+  return workInProgress.child
 }
 
 /**

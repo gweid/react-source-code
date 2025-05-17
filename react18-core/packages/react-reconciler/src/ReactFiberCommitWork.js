@@ -1,4 +1,4 @@
-import { HostRoot, HostComponent, HostText } from './ReactWorkTags'
+import { FunctionComponent, HostRoot, HostComponent, HostText } from './ReactWorkTags'
 import { MutationMask } from './ReactFiberFlags'
 import { Placement } from './ReactFiberFlags'
 import { appendChild, insertBefore } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
@@ -10,6 +10,7 @@ import { appendChild, insertBefore } from 'react-dom-bindings/src/client/ReactDO
  */
 export const commitMutationEffectsOnFiber = (finishedWork, root) => {
   switch (finishedWork.tag) {
+    case FunctionComponent:
     case HostRoot:
     case HostComponent:
     case HostText:
@@ -83,11 +84,11 @@ const commitPlacement = (finishedWork) => {
  * @returns 可以挂载的父节点
  */
 const getHostParentFiber = (fiber) => {
-  const parent = fiber.return
+  let parent = fiber.return
 
   // 找到可以挂载的父节点，这里循环是：当节点是函数组件之类的，是不能做挂载容器的，需要继续找上一层父组件
   while (parent !== null) {
-    if (isHostParent(fiber)) {
+    if (isHostParent(parent)) {
       return parent
     }
     parent = parent.return

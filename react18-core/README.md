@@ -299,6 +299,18 @@ commitWork 核心：
 
 
 
+#### 函数组件的初始化
+
+函数组件首先会在 beginWork 阶段，执行函数，得到虚拟 DOM，然后就是标准的流程：虚拟DOM ---> Fiber 树 ---> 真实 DOM ---> 挂载
+
+- 首先在 beginWork 阶段，beginWork 函数中，对函数组件进行处理，调用 mountIndeterminateComponent，里面：
+  - 生成函数组件的虚拟 DOM
+  - 调用 reconcileChildren 协调子节点，生成子 Fiber 树
+  - 返回第一个子 Fiber 节点
+- commitWork 阶段的 commitMutationEffectsOnFiber 函数，添加多一个 FunctionComponent 条件判断
+
+
+
 ### 合成事件系统
 
 
