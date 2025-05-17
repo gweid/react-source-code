@@ -282,8 +282,20 @@ complateWork 核心：
 
 
 
-- 
-- 
+commitWork 核心：
+
+- 首先，调用 commitRoot 开始执行 commitWork 阶段
+  - 通过 subtreeFlags 和 flags 判断是否是需要更新的节点
+  - 如果是需要更新的，调用 commitMutationEffectsOnFiber 函数执行挂载准备
+- commitMutationEffectsOnFiber 中判断 tag 类型，当是 HostRoot、HostComponent、HostText，进入更新逻辑
+  - 调用 recursivelyTraverseMutationEffects，这个主要是做递归处理子节点，最终里面也是会调用 commitReconciliationEffects
+  - 调用 commitReconciliationEffects，里面判断 `flags & Placement`，代表插入操作，那么调用 commitPlacement 开始进行节点挂载
+- commitPlacement 先调用 getHostParentFiber 找当前节点的父节点（会处理一些特殊情况，比如父节点是函数组件，是不能做挂载容器的，需要继续找上一层父组件）
+  - 如果父节点是 HostRoot
+    - 找到父节点的真实 DOM
+    - 通过 getHostSibling 函数，确定锚点（就是如果是通过 insertBefore 插入，需要确定的插入到谁的前面，这个就是锚点）
+    - 调用 insertOrAppendPlacementNode 执行 DOM 挂载
+  - 如果是 HostComponent，也是一样的逻辑，区别是找父节点的真实 DOM 的方式有差异
 
 
 

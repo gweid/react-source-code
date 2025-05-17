@@ -2,6 +2,8 @@ import { scheduleCallback } from 'scheduler'
 import { createWorkInProgress } from './ReactFiber'
 import { beginWork } from './ReactFiberBeginWork'
 import { completeWork } from './ReactFiberCompleteWork'
+import { MutationMask, NoFlags } from './ReactFiberFlags'
+import { commitMutationEffectsOnFiber } from './ReactFiberCommitWork'
 
 let workInProgress = null
 
@@ -29,6 +31,7 @@ const ensureRootIsScheduled = (root) => {
  */
 const performConcurrentWorkOnRoot = (root) => {
   // 同步渲染，这并不是渲染到页面，而是对 Fiber 树进行一系列的构建和操作
+  // 创建 workInProgress，以及 beginWork 和 completeWork 阶段在这里面
   renderRootSync(root)
 
   // 渲染后的 workInProgress 树
@@ -44,7 +47,9 @@ const performConcurrentWorkOnRoot = (root) => {
  * @param {*} root FiberRoot
  */
 const renderRootSync = (root) => {
+  // 创建 workInProgress Fiber 树
   prepareFreshStack(root)
+  // 循环处理 Fiber 树，beginWork 和 completeWork 阶段都在这里
   workLoopSync()
 }
 
@@ -127,5 +132,20 @@ const completeUnitOfWork = (unitOfWork) => {
  * @param {*} root FiberRoot
  */
 const commitRoot = (root) => {
+  // finishedWork 在 perfromConcurrentWorkOnRoot 中赋值
+  // 执行完 renderRootSync 后，会将 workInProgress 赋值给 finishedWork
+  // renderRootSync 中执行了 beginWork 和 completeWork 阶段
+  // 所以 finishedWork 就是 新的 Fiber 树
+  const { finishedWork } = root
 
+  // 获取整个子 Fiber 树的所有副作用，在 completeWork 阶段的 bubbleProperties 函数会设置
+  const subtreeHasEffects = (finishedWork.subtreeFlags & MutationMask) !== NoFlags
+  // 判断根 Fiber 树是否有副作用
+  const rootHasEffects = (finishedWork.flags & MutationMask)!== NoFlags
+
+  if (subtreeHasEffects || rootHasEffects) {
+    commitMutationEffectsOnFiber(finishedWork, root)
+  }
+
+  root.current = finishedWork
 }

@@ -41,3 +41,22 @@ export const appendInitialChild = (parent, child) => {
 export const finalizeInitialChildren = (domElement, type, props) => {
   setInitialProperties(domElement, type, props)
 }
+
+/**
+ * 将子节点添加到父节点
+ * @param {*} parentInstance 父节点
+ * @param {*} child 子节点
+ */
+export const appendChild = (parentInstance, child) => {
+  parentInstance.appendChild(child)
+}
+
+/**
+ * 在指定子节点前插入新的子节点
+ * @param {*} parentInstance 父节点
+ * @param {*} child 需要插入的新子节点
+ * @param {*} beforeChild 指定的子节点
+ */
+export const insertBefore = (parentInstance, child, beforeChild) => {
+  parentInstance.insertBefore(child, beforeChild);
+}
