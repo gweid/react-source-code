@@ -36,6 +36,20 @@ Fiber 通过任务分片、优先级调度和可中断渲染，使 React 能够�
 
 Fiber 是一种数据结构：
 
+- FiberRoot 是整个应用程序的根节点，也就是 #root 节点
+
+- RootFiber 是Fiber 树的根节点，比如下面，RootFiber 就是最外层的 div 标签
+
+  ```jsx
+  const element = (
+    <div key='divKey'>
+      <h1>Hello, world!</h1>
+    </div>
+  )
+  
+  root.render(element)
+  ```
+
 ![](../imgs/img4.png)
 
 在代码中体现为一个对象，这个对象包括很多属性，fiber 树关键属性如下：

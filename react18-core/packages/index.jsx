@@ -8,12 +8,6 @@
 
 // const root = createRoot(document.getElementById('root'))
 
-// const Com = () => {
-//   return (
-//     <div>组件</div>
-//   )
-// }
-
 // const element = (
 //   <div key='divKey'>
 //     <h1>Hello, world!</h1>
@@ -22,10 +16,9 @@
 //       <p>p标签</p>
 //     </div>
 //     文本节点
-//     <Com>
-//       <span>组件的 children</span>
-//     </Com>
-//     <img src="" alt="空图片" />
+//     <div>
+//       <a href="https://github.com/gweid/react-source-code">github地址</a>
+//     </div>
 //   </div>
 // )
 
@@ -47,7 +40,9 @@ function FuncComponent() {
         <p>p标签</p>
       </div>
       文本节点
-      <img src="" alt="空图片" />
+      <div>
+        <a href="https://github.com/gweid/react-source-code">github地址</a>
+      </div>
     </div>
   )
 }
