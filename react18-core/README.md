@@ -9,9 +9,12 @@ react18-core/
   ├── packages                          // 子包目录
   │   ├── react                         // react 核心包
   │   ├── react-dom                     // react-dom 核心包
+  │   ├── react-dom-bindings            // react-dom 绑定
+  │   │   ├── src
+  │   │   │   ├── client                // 对 DOM 的具体操作
+  │   │   │   ├── events                // 事件绑定
   │   ├── react-reconciler              // react 协调器
   │   ├── scheduler                     // 调度器
-  │   ├── react-dom-bindings            // react-dom 绑定
   │   ├── shared                        // 公共代码
   │   └── index.jsx                     // 调试代码
 ```
@@ -345,6 +348,30 @@ commitWork 核心：
 
 
 ### 合成事件系统
+
+
+
+#### 事件名注册
+
+
+
+#### 注册监听事件
+
+
+
+#### 派发事件
+
+
+
+#### 收集注册函数
+
+
+
+#### 合成事件
+
+
+
+
 
 
 
