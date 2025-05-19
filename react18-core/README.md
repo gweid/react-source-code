@@ -141,10 +141,10 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 > jsxDEV 作用：创建虚拟 DOM
 
-
+![](../imgs/img9.png)
 
 - jsxDEV：
-  - 处理 key、ref、props 属性，
+  - 处理 key、ref、props 属性
   - 调用 ReactElement 生成虚拟 DOM
   - 虚拟 DOM 生成抽离到 ReactElement 函数中，便于复用
 
@@ -154,10 +154,10 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 > react 18 引入的方法。ReactDOM.render 是在同步模式下执行的，组件更新和渲染都是同步执行，不能中断。createRoot 允许在并发模式下执行，并发模式允许 React 在渲染和更新组件时利用时间切片，使得渲染过程是可中断的，从而提高应用程序的响应性和性能
 
-
+![](../imgs/img10.png)
 
 - createRoot：
-  - 调用 createContainer 创建 FiberRoot 节点
+  - 调用 createContainer 根据真实 DOM 创建根节点 FiberRoot 节点
   - createContainer 调用 createFiberRoot 创建 FiberRoot 并返回
   - 通过 new ReactDOMRoot 进一步封装处理 FiberRoot 并返回
 - ReactDOMRoot：
@@ -186,21 +186,29 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 >
 > Fiber 本身包括了虚拟 DOM 在内的很多信息，这些丰富的信息能够支持 Fiber 在执行任务的过程中被中断和恢复。beginWork 和 completeWork 其实就是就是在执行 Fiber 相关任务：虚拟 DOM 转化为 Fiber，Fiber 转化为真实 DOM。但是 Fiber 转化为真实 DOM 后挂载到页面的这个过程是不可以中断的。也就是 Fiber 内部怎么运行都可以，但是涉及到和页面真实发生关系的时候是不可以中断的。这也就是区分为渲染阶段和提交阶段的原因。也就是说渲染阶段可以中断恢复，提交阶段不可以
 
+Fiber 节点与 虚拟 DOM：
+
 ![](../imgs/img6.png)
 
-- render 函数中调用 updateContainer 函数，实现 虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载
-- updateContainer 函数：
-  - 中通过 createUpdate 创建更新对象 update，将虚拟 DOM 保存到更新对象的 payload 属性中；
+**render 函数核心：**
+
+![](../imgs/img11.png)
+
+- render 函数中调用 updateContainer 函数：
+  - updateContainer 通过 createUpdate 创建更新对象 update，将虚拟 DOM 保存到更新对象的 payload 属性中；
   - 通过 enqueueUpdate 将更新对象加入到 RootFiber.updateQueue（更新队列）中，这里面通过构造单向循环列表实现
-- 最后，render 函数调用 schedulerUpdateOnFiber 执行调度更新
+  - enqueueUpdate 中会调用 markUpdateLaneFromFiberToRoot 函数，返回 FiberRoot 节点
+- 最后，render 函数调用 schedulerUpdateOnFiber，传入参数 FiberRoot，执行调度更新，这个是调度更新的入口
 
 
 
 #### schedulerUpdateOnFiber
 
 > schedulerUpdateOnFiber 是调度更新的入口，流程贯穿了：beginWork、completeWork、commitWork 三个阶段
+>
+> 实现了：虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载 流程
 
-
+![](../imgs/img12.png)
 
 - schedulerUpdateOnFiber 函数：
   - 调用 ensureRootIsScheduled，这里面通过调度器 scheduleCallback 执行 performConcurrentWorkOnRoot 函数。
@@ -232,9 +240,14 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 
 
-beginWork 核心：
+**beginWork 核心：**
 
-- beginWork 中判断 workInProgress.tag，当是根 Fiber 时，执行 updateHostRoot；是原生标签时，执行 updateHostComponent
+![](../imgs/img13.png)
+
+- beginWork 中判断 workInProgress.tag，当是根 Fiber 时，执行 updateHostRoot；是原生标签时，执行 updateHostComponent；是文本时，不做处理，返回 null
+  
+  > 文本时，为什么可以在这里不做生成，因为在 reconcileChildFibers 中，调用 createChild 时，会做处理
+  
   - updateHostRoot：
     - 调用 processUpdateQueue，根据旧状态和更新队列中的更新计算最新的状态，得到新的 memoizedState，里面包含新的虚拟 DOM 
     - 调用 reconcileChildren 函数协调子元素，这个是 beginWork 的核心，会调用 createChildReconciler 将新的虚拟 DOM 转换为新的 Fiber，并返回第一个子 Fiber
@@ -257,7 +270,9 @@ beginWork 核心：
 
 上图，右边的 Fiber 树，黄色线是 beginWork 顺序，蓝色线是 completeWork 顺序
 
-completeWork 流程：
+
+
+**completeWork 流程：**
 
 - beginWork 处理完 C1、C2、C3 后，返回 C1，C1 没有子节点了，开始执行 completeWork
 - completeWork 从 C1 开始（也就是 completeWork 是从第一个没有子节点的 Fiber 节点开始的），到 C2，执行完 C2 后，跳到 C3，C3 中发现还有子节点还没有转 Fiber
@@ -268,7 +283,9 @@ completeWork 流程：
 
 
 
-complateWork 核心：
+**complateWork 核心：**
+
+![](../imgs/img14.png)
 
 对不同 workInProgress.tag 类型做处理
 
@@ -297,6 +314,8 @@ complateWork 核心：
 
 
 commitWork 核心：
+
+![](../imgs/img15.png)
 
 - 首先，调用 commitRoot 开始执行 commitWork 阶段
   - 通过 subtreeFlags 和 flags 判断是否是需要更新的节点

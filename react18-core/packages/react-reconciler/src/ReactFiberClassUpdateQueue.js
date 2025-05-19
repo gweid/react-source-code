@@ -24,7 +24,7 @@ export const initializeUpdateQueue = (fiber) => {
 export const createUpdate = () => {
   const update = {
     tag: UpdateState,
-    payload: null,
+    payload: null, // 存放虚拟 DOM
     next: null
   }
 

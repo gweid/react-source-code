@@ -26,9 +26,9 @@ export const updateContainer = (element, container) => {
   // 将要更新的虚拟 DOM 保存在更新对象 update.payload 中
   update.payload = { element }
 
-  // 将更新对象 update 保存到 RootFiber.updateQueue 中，并返回 RootFiber
+  // 将更新对象 update 保存到 RootFiber.updateQueue 中，并返回 FiberRoot
   const root = enqueueUpdate(current, update)
 
-  // 调度更新
+  // 调度更新（调度更新的入口函数）
   schedulerUpdateOnFiber(root)
 }

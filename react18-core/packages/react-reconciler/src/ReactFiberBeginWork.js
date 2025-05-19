@@ -25,7 +25,8 @@ export const beginWork = (current, workInProgress) => {
     case HostComponent:
       return updateHostComponent(current, workInProgress)
     case HostText:
-      // 为什么文本节点返回 null，因为 Fiber 对文本节点做了优化
+      // 为什么文本节点返回 null，因为 Fiber 对文本节点做了优化，不生成文本节点的 Fiber 树
+      // 那么文本树的 Fiber 生成，是
       return null
     default:
       return null
