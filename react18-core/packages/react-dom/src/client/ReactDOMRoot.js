@@ -2,6 +2,7 @@ import {
   createContainer,
   updateContainer
 } from "react-reconciler/src/ReactFiberReconciler"
+import { listenToAllSupportedEvents } from 'react-dom-bindings/src/events/DOMPluginEventSystem'
 
 /**
  * ReactDOMRoot 构造函数
@@ -42,6 +43,9 @@ export const createRoot = (container) => {
   // 根据真实 DOM （root根节点）节点创建 Fiber 树的根节点
   // root 是 FiberRoot，root.current 是 RootFiber
   const root = createContainer(container)
+
+  // 事件系统
+  listenToAllSupportedEvents(container)
 
   return new ReactDOMRoot(root)
 }

@@ -1,8 +1,11 @@
+import { HostComponent } from 'react-reconciler/src/ReactWorkTags'
+import { IS_CAPTURE_PHASE } from './EventSystemFlags'
 import { allNativeEvents } from './EventRegistry'
 import * as simpleEventPlugin from './plugins/SimpleEventPlugin'
-import { IS_CAPTURE_PHASE } from './EventSystemFlags'
 import { createEventListenerWrapperWithPriority } from './ReactDOMEventListener'
 import { addEventCaptureListener, addEventBubbleListener } from './EventListener'
+import getEventTarget from './getEventTarget'
+import getListener from './getListener'
 
 // 注册所有的 SimpleEventPlugin 事件
 simpleEventPlugin.registerEvents()
@@ -19,7 +22,7 @@ export const listenToAllSupportedEvents = (rootContainerElement) => {
   if (!rootContainerElement[listeningMarker]) {
     rootContainerElement[listeningMarker] = true
 
-    allNativeEvents.forEatch(domEventName => {
+    allNativeEvents.forEach(domEventName => {
       listenToNativeEvent(domEventName, true, rootContainerElement)
       listenToNativeEvent(domEventName, false, rootContainerElement)
     })
@@ -71,5 +74,213 @@ const addTrappedEventListener = (targetContainer, domEventName, eventSystemFlags
     addEventCaptureListener(targetContainer, domEventName, listener)
   } else {
     addEventBubbleListener(targetContainer, domEventName, listener)
+  }
+}
+
+/**
+ * 为事件插件系统派发事件
+ * @param {*} domEventName 事件名
+ * @param {*} eventSystemFlags 事件标记，捕获 | 冒泡
+ * @param {*} nativeEvent 原生的浏览器 DOM 事件对象（如 MouseEvent）
+ * @param {*} targetInst 触发事件源的元素的 Fiber
+ * @param {*} targetContainer 目标元素（#root 节点）
+ */
+export const dispatchEventForPluginEventSystem = (
+  domEventName,
+  eventSystemFlags,
+  nativeEvent,
+  targetInst,
+  targetContainer
+) => {
+  dispatchEventForPlugins(
+    domEventName,
+    eventSystemFlags,
+    nativeEvent,
+    targetInst,
+    targetContainer
+  )
+}
+
+/**
+ * 派发事件
+ * @param {*} domEventName 事件名
+ * @param {*} eventSystemFlags 事件标记，捕获 | 冒泡
+ * @param {*} nativeEvent 原生的浏览器 DOM 事件对象（如 MouseEvent）
+ * @param {*} targetInst 触发事件源的元素的 Fiber
+ * @param {*} targetContainer 目标元素（#root 节点）
+ */
+const dispatchEventForPlugins = (
+  domEventName,
+  eventSystemFlags,
+  nativeEvent,
+  targetInst,
+  targetContainer
+) => {
+  // 获取触发事件目标元素
+  const nativeEventTarget = getEventTarget(nativeEvent)
+
+  const dispatchQueue = []
+
+  // 创建合成事件，收集事件监听函数，添加到 dispatchQueue 队列
+  extractEvents(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+    targetContainer
+  )
+
+  // 处理事件派发队列
+  processDispatchQueue(dispatchQueue, eventSystemFlags)
+}
+
+/**
+ * 创建合成事件，收集事件监听函数，添加到 dispatchQueue 队列
+ * @param {*} dispatchQueue 事件派发队列
+ * @param {*} domEventName 事件名
+ * @param {*} targetInst 触发事件源的元素的 Fiber
+ * @param {*} nativeEvent 原生的浏览器 DOM 事件对象（如 MouseEvent）
+ * @param {*} nativeEventTarget 触发事件目标元素
+ * @param {*} eventSystemFlags 事件标记，捕获 | 冒泡
+ * @param {*} targetContainer 目标元素（#root 节点）
+ */
+const extractEvents = (
+  dispatchQueue,
+  domEventName,
+  targetInst,
+  nativeEvent,
+  nativeEventTarget,
+  eventSystemFlags,
+  targetContainer
+) => {
+
+  // 创建合成事件，收集事件监听函数，添加到 dispatchQueue 队列
+  simpleEventPlugin.extractEvents(
+    dispatchQueue,
+    domEventName,
+    targetInst,
+    nativeEvent,
+    nativeEventTarget,
+    eventSystemFlags,
+    targetContainer
+  )
+}
+
+/**
+ * 处理事件派发队列
+ * @param {*} dispatchQueue 事件派发队列
+ * @param {*} eventSystemFlags 事件标记 捕获 | 冒泡
+ */
+const processDispatchQueue = (dispatchQueue, eventSystemFlags) => {
+  // 判断是否在捕获阶段
+  const isCapturePhase = (eventSystemFlags & IS_CAPTURE_PHASE) !== 0
+
+  for (let i = 0; i < dispatchQueue.length; i++) {
+    const { event, listeners } = dispatchQueue[i]
+
+    // 按顺序处理事件派发队列中的事件
+    processDispatchQueueItemsInOrder(event, listeners, isCapturePhase)
+  }
+}
+
+/**
+ * 按顺序处理事件派发队列中的事件
+ * @param {*} event 合成事件
+ * @param {*} dispatchListeners 事件派发队列
+ * @param {*} isCapturePhase 是否捕获
+ * @returns 
+ */
+const processDispatchQueueItemsInOrder = (event, dispatchListeners, isCapturePhase) => {
+  if (isCapturePhase) {
+    // 捕获阶段，从后往前处理
+    for (let i = dispatchListeners.length - 1; i >= 0; i--) {
+      const { listener, currentTarget } = dispatchListeners[i]
+
+      // 如果阻止了时间的传播，那么停止
+      if (event.isPropagationStopped()) {
+        return;
+      }
+      executeDispatch(event, listener, currentTarget)
+    }
+  } else {
+    // 冒泡阶段，从前往后处理
+    for (let i = 0; i < dispatchListeners.length; i++) {
+      const { listener, currentTarget } = dispatchListeners[i]
+
+      // 如果阻止了时间的传播，那么停止
+      if (event.isPropagationStopped()) {
+        return;
+      }
+      executeDispatch(event, listener, currentTarget)
+    }
+  }
+}
+
+/**
+ * 执行派发的事件
+ * @param {*} event 
+ * @param {*} listener 
+ * @param {*} currentTarget 
+ */
+const executeDispatch = (event, listener, currentTarget) => {
+  event.currentTarget = currentTarget
+  listener(event)
+}
+
+/**
+ * 层层向上遍历 Fiber 节点，收集所有事件监听函数
+ * @param {*} targetFiber 目标Fiber实例
+ * @param {*} reactName React事件名称
+ * @param {*} nativeEventType 原生事件类型
+ * @param {*} isCapturePhase 是否在捕获阶段
+ * @returns
+ */
+export const accumulateSinglePhaseListeners = (
+  targetFiber,
+  reactName,
+  nativeEventType,
+  isCapturePhase
+) => {
+  const captureName = reactName + 'Capture'
+  
+  const reactEventName = isCapturePhase ? captureName : reactName
+
+  const listeners = []
+
+  let instance = targetFiber
+
+  // 向上遍历 Fiber 树，收集事件监听器
+  while (instance !== null) {
+    const { stateNode, tag } = instance
+
+    if (tag === HostComponent && stateNode !== null) {
+
+      const listener = getListener(instance, reactEventName)
+
+      if (listener) {
+        listeners.push(createDispatchListener(instance, listener, stateNode))
+      }
+    }
+
+    instance = instance.return
+  }
+
+  return listeners
+}
+
+/**
+ * 创建派发监听函数
+ * @param {*} instance Fiber实例
+ * @param {*} listener 监听器函数
+ * @param {*} currentTarget 当前目标元素
+ * @returns 
+ */
+const createDispatchListener = (instance, listener, currentTarget) => {
+  return {
+    instance,
+    listener,
+    currentTarget
   }
 }

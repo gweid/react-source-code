@@ -349,11 +349,15 @@ commitWork 核心：
 
 ### 合成事件系统
 
-
-
-#### 事件名及监听事件注册
-
 v17.0.0 开始， react 事件是委托到 React 树的根 DOM 容器中上（#root），旧版的是委托到 document 上，这里会有差异
+
+
+
+react 合成事件的核心：事件绑定与事件派发
+
+
+
+#### 事件名注册及事件绑定
 
 ![](../imgs/img16.png)
 
@@ -371,21 +375,25 @@ v17.0.0 开始， react 事件是委托到 React 树的根 DOM 容器中上（#r
 
 
 
-#### 派发事件
+#### 事件收集、合成、派发
 
+![](../imgs/img17.png)
 
-
-
-
-#### 收集注册函数
-
-
-
-#### 合成事件
-
-
-
-
+- 回到调用 createEventListenerWrapperWithPriority 创建监听器这一步，里面给 listenerWrapper 赋值一个事件派发函数 dispatchDiscreteEvent，这是事件派发函数的入口
+- dispatchDiscreteEvent 中调用 dispatchEvent，dispatchEvent 中做处理：
+  - getEventTarget 获取触发事件目标元素
+  - 通过获取到的触发事件目标元素，去获取对应的 Fiber，这个 Fiber 会在 completeWork 阶段调用 createInstance 创建真实 DOM 的时候，赋值上
+  - 调用 dispatchEventForPluginEventSystem
+- dispatchEventForPluginEventSystem 中调用 dispatchEventForPlugins，dispatchEventForPlugins 中做处理：
+  - getEventTarget 获取触发事件目标元素
+  - 调用 extractEvents，这个会调用 simpleEventPlugin.extractEvents，simpleEventPlugin.extractEvents 中
+    - 通过 SyntheticEventCtor 创建合成事件
+    - 通过 accumulateSinglePhaseListeners 层层向上遍历 Fiber 节点，层层向上遍历 Fiber 节点，收集所有事件监听函数
+    - 将合成事件和事件监听函数添加进 dispatchQueue
+  - 调用 processDispatchQueue 处理事件派发队列
+    - 遍历 dispatchQueue，对每个事件对象执行 processDispatchQueueItemsInOrder 按顺序处理事件派发队列中的事件
+    - processDispatchQueueItemsInOrder 中遍历时间监听器数组，根据是捕获还是冒泡阶段，逐一执行监听器数组中的监听器函数
+- 最后，就是将监听事件的入口 listenToAllSupportedEvents 函数，放在 createRoot 中，到此，事件派发就结束
 
 
 

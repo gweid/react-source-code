@@ -1,4 +1,5 @@
 import { setInitialProperties } from './ReactDOMComponent'
+import { precacheFiberNode, updateFiberProps } from './ReactDOMComponentTree'
 
 export const shouldSetTextContent = (type, props) => {
   return typeof props.children === 'string' || typeof props.children === 'number'
@@ -8,10 +9,18 @@ export const shouldSetTextContent = (type, props) => {
  * 创建真实 DOM 节点  
  * @param {*} type DOM 节点类型
  * @param {*} props 
- * @param {*} workInProgress 
+ * @param {*} internalInstanceHandle 就是 workInProgress 
  */
-export const createInstance = (type, props, workInProgress) => {
-  return document.createElement(type)
+export const createInstance = (type, props, internalInstanceHandle) => {
+  const domElement = document.createElement(type)
+
+  // 在真实 DOM 节点添加 Fiber
+  precacheFiberNode(internalInstanceHandle, domElement)
+
+  // 在真实 DOM 节点添加 props
+  updateFiberProps(domElement, props)
+
+  return domElement
 }
 
 /**
