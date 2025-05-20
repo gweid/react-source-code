@@ -15,7 +15,8 @@ const listeningMarker = '_reactListening' + Math.random().toString(36).slice(2);
 
 
 /**
- * 监听所有支持的事件
+ * 监听所有支持的事件，react 事件系统的入口
+ * 在 createRoot 函数中进行调用
  * @param {*} rootContainerElement 就是 #root 节点，react 新版本会将事件委托到 #root，而不是 document
  */
 export const listenToAllSupportedEvents = (rootContainerElement) => {
