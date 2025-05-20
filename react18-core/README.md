@@ -351,15 +351,29 @@ commitWork 核心：
 
 
 
-#### 事件名注册
+#### 事件名及监听事件注册
 
+v17.0.0 开始， react 事件是委托到 React 树的根 DOM 容器中上（#root），旧版的是委托到 document 上，这里会有差异
 
+![](../imgs/img16.png)
 
-#### 注册监听事件
+- 首先，监听事件的入口 listenToAllSupportedEvents 函数，这里面会遍历所有事件 allNativeEvents，对每个事件进行捕获和冒泡绑定
+- allNativeEvents 中事件的添加时机：
+  - 首先，一开始会执行 simpleEventPlugin.registerEvents()，这个是插件模式，注册所有的插件
+  - registerEvents 中会遍历 simpleEventPluginEvents 数组（这个数组里面定义了很多的事件，比如：click 等），然后调用 registerSimpleEvent 进行对浏览器原生事件和 react 事件的映射，保存到 Map 结构
+  - registerSimpleEvent 中还会调用 registerTwoPhaseEvent 注册两阶段的事件 （包括捕获和冒泡阶段），这一步主要就是往     allNativeEvents 中添加两阶段的事件
+  - 到此，就完成了事件名的注册
+- 然后回到 listenToAllSupportedEvents 函数，遍历 allNativeEvents，对每一个事件执行 listenToNativeEvent 函数，这个也是执行两遍，主要就是捕获和冒泡
+- listenToNativeEvent 调用 addTrappedEventListener，这里面做的几件事：
+  - 通过 createEventListenerWrapperWithPriority 创建事件监听器
+  - 根据捕获还是冒泡，分别调用 addEventCaptureListener 和 addEventBubbleListener，将事件监听器绑定到目标元素（#root）
+  - 到这一步，监听事件也注册完毕
 
 
 
 #### 派发事件
+
+
 
 
 
