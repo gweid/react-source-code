@@ -23,6 +23,7 @@ export function FiberNode(tag, pendingProps, key) {
   this.subtreeFlags = NoFlags        // 所有子节点的标记，比如是更新还是删除（优化作用，层层通知）
   this.alternate = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
   this.index = 0                     // 表示同级节点中节点的位置索引
+  this.deletions = null              // 要删除的子节点
 }
 
 /**

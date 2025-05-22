@@ -52,6 +52,48 @@
 
 
 // ----------------------- 合成事件系统 -----------------------
+// import { createRoot } from 'react-dom/client'
+
+// const root = createRoot(document.getElementById('root'))
+
+// function FuncComponent() {
+//   const handleParentClick = (e) => {
+//     console.log('父节点')
+//   }
+
+//   const handleParentClickCapture = (e) => {
+//     console.log('父节点capture')
+//   }
+
+//   const handleChildClick = (e) => {
+//     console.log('子节点')
+//     // e.stopPropagation()
+//   }
+
+//   const handleChildClickCapture = (e) => {
+//     console.log('子节点capture')
+//   }
+
+//   return (
+//     <div
+//       style={{ width: '200px', height: '200px', border: '1px solid #ccc'}}
+//       onClick={handleParentClick}
+//       onClickCapture={handleParentClickCapture}
+//     >
+//       <button
+//         onClick={handleChildClick}
+//         onClickCapture={handleChildClickCapture}
+//       >
+//         子节点
+//       </button>
+//     </div>
+//   )
+// }
+
+// root.render(<FuncComponent />)
+
+
+// ----------------------- 组件更新和 Hooks -----------------------
 import { createRoot } from 'react-dom/client'
 
 const root = createRoot(document.getElementById('root'))

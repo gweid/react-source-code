@@ -12,7 +12,8 @@
  *    - if (subtreeFlags & Placement)
  *  - ​灵活的状态组合​​：一个变量可表示多种副作用
  */
-export const NoFlags = /*   */ 0b00000000000000000000000000 // 标识位：无
-export const Placement = /* */ 0b00000000000000000000000010 // 标识位：插入
-export const Update = /*    */ 0b00000000000000000000000100 // 标识位：更新
+export const NoFlags = /*          */ 0b00000000000000000000000000 // 标识位：无
+export const Placement = /*        */ 0b00000000000000000000000010 // 标识位：插入
+export const Update = /*           */ 0b00000000000000000000000100 // 标识位：更新
+export const ChildDeletion = /*    */ 0b00000000000000000000010000 // 标识位：删除子节点
 export const MutationMask = Placement | Update; // 插入或者更新，变更标识位掩码

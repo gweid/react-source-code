@@ -401,6 +401,91 @@ react 合成事件的核心：事件绑定与事件派发
 
 
 
+#### 新旧版本渲染更新流程
+
+
+
+react 早期版本的 DOM Diff 是指新老虚拟 DOM 之间的比较；引入 Fiber 架构之后，DOM Diff 是指老 Fiber 节点与新虚拟 DOM 的比较
+
+![](../imgs/img18.png)
+
+
+
+#### DOM Diff 整体流程
+
+
+
+DOM Diff 在 beginWork 阶段
+
+
+
+Fiber 架构下的 DOM Diff 是指 **当前内存中的 Fiber 树（Current Fiber）与新生成的虚拟 DOM（ReactElement 树）的比较**，最终生成新的 Fiber 树（WorkInProgress Fiber）
+
+
+
+React 18 的 DOM Diff 算法基于 **Fiber 架构**，其核心方案仍延续 React 的 **分层比较策略**，但通过并发渲染（Concurrent Rendering）和优先级调度进行了优化
+
+
+
+![](../imgs/img19.png)
+
+
+
+#### 新虚拟 DOM 是单节点
+
+在 beginWork 阶段，生成新 Fiber 的时候，如果是单节点，调用 reconcileSingleElement 函数，这里面做单节点 DOM Diff：
+
+- 如果没有老 Fiber，那么直接生成新 Fiber 即可
+
+- 有老 Fiber，判断 key 是否相同
+
+  1. key 相同，判断标签 type 是否相同
+     - type 也相同，先删除其它无用的 Fiber，复用这个 Fiber
+     - type 不同，那么直接删除当前 Fiber 及兄弟 Fiber，创建新的 Fiber
+
+  2. key 不同，删除当前老 Fiber，判断是否有兄弟 Fiber
+     - 有兄弟 Fiber，重新走流程 1 判断
+     - 没有兄弟 Fiber，那么创建新 Fiber
+
+
+
+#### 新虚拟 DOM 是多节点
+
+在 beginWork 阶段，生成新 Fiber 的时候，如果是多节点，调用 reconcileChildrenArray 函数，这里面做多节点 DOM Diff。
+
+两轮比较：
+
+- **第一轮**：线性遍历新旧节点，通过 `key` 和 `type` 匹配可复用节点，直到遇到不匹配的节点
+- **第二轮**：将剩余旧节点存入 `Map`，遍历剩余新节点，通过 `key` 查找可复用节点
+
+
+
+**先同序线性比较：**
+
+- 先进行第一轮，同序比较，如果 key 不相同，就会立即终止，不再往下比较，启动第二轮比较
+- 同序比较，如果 key 相同
+  - 判断 type 是否相同：
+    - type 相同，先删除其它的老 Fiber，复用当前老 Fiber
+    - type 不同，生成新 Fiber，删除老 Fiber
+    - 判断老 Fiber 和虚拟 DOM 是否遍历完，如果都没有遍历完，那么继续同序比较
+    - 如果老 Fiber 和虚拟 DOM 有一个遍历完
+    - 判断如果是老 Fiber 已经遍历完，新虚拟 DOM 没有遍历完，那么说明剩下的新虚拟 DOM 需要新创建
+    - 第一轮比较被终止后，如果老 Fiber 和 新虚拟 DOM 都没有遍历完，那么进入第二种比较方案
+- 在第一种比较方案终止前，如果：
+  - 老 Fiber 已经遍历完，新虚拟 DOM 没有遍历完，那么说明剩下的新虚拟 DOM 需要新创建
+  - 第一轮比较被终止后，如果老 Fiber 和 新虚拟 DOM 都没有遍历完，那么进入第二种比较方案
+
+
+
+**第二轮比较：**
+
+- 经过第一轮，如果老 Fiber 和新虚拟 DOM 都没有遍历完，将剩余的老 Fiber 的 key 或索引和 Fiber 对象建立对应关系，遍历剩余新虚拟 DOM
+- 通过对应关系 key 判断是否有可以复用的 Fiber
+  - 有可复用的，复用老 Fiber
+    - 位置是否可以不动，可以不动不做标记，要动，做插入标记
+  - 没有可复用的，创建新 Fiber，做插入标记
+- 继续循环，直到新虚拟 DOM 遍历完
+
 
 
 ### 实现 Hooks
