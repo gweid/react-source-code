@@ -196,7 +196,8 @@ const createChildReconciler = (shouldTrackSideEffects) => {
     let newIdx = 0
     let oldFiber = currentFirstChild
     let nextOldFiber = null // 下一个老 Fiber 子节点
-    let lastPlacedIndex  = 0 // 
+    // 上一个可复用的不用改变位置的子 Fiber 在老 Fiber 中的索引位置（主要用来确定可复用的子 Fiber 是否需要移动）
+    let lastPlacedIndex  = 0
 
     /**
      * 更新阶段 DOM diff 逻辑
@@ -229,7 +230,8 @@ const createChildReconciler = (shouldTrackSideEffects) => {
         }
       }
 
-      // lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
+      // 获取上一个可复用的不用改变位置的子 Fiber 在老 Fiber 中的索引位置（主要用来确定可复用的子 Fiber 是否需要移动）
+      lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
 
       // 建立兄弟关系，形成链表
       // 注意：兄弟关系只记录下一个，不会记录上一个
@@ -250,15 +252,15 @@ const createChildReconciler = (shouldTrackSideEffects) => {
      *  1、初始化阶段
      *  2、更新 DOM Diff 第一轮同序线性比较走完后，老 Fiber 也遍历完了
      */
-    if (oldFiber === null) {      
+    if (oldFiber === null) {
       for (; newIdx < newChildren.length; newIdx++) {
         const newFiber = createChild(returnFiber, newChildren[newIdx])
-  
+
         if (newFiber === null) continue
-  
-        // 为新创建的 Fiber 设置索引（标记同级节点中节点的位置索引），并在必要时设置副作用(打标记)
-        placeChild(newFiber, newIdx)
-  
+
+        // 获取上一个可复用的不用改变位置的子 Fiber 在老 Fiber 中的索引位置（主要用来确定可复用的子 Fiber 是否需要移动）
+        lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
+
         // 建立兄弟关系，形成链表
         // 注意：兄弟关系只记录下一个，不会记录上一个
         if (previousNewFiber === null) {
@@ -292,7 +294,8 @@ const createChildReconciler = (shouldTrackSideEffects) => {
           }
         }
 
-        // lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
+        // 获取上一个可复用的不用改变位置的子 Fiber 在老 Fiber 中的索引位置（主要用来确定可复用的子 Fiber 是否需要移动）
+        lastPlacedIndex = placeChild(newFiber, lastPlacedIndex, newIdx)
 
         if (previousNewFiber === null) {
           resultingFirstChild = newFiber;
