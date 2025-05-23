@@ -149,7 +149,7 @@ const createChildReconciler = (shouldTrackSideEffects) => {
    */
   const reconcileSingleElement = (returnFiber, currentFirstChild, element) => {
     const key = element.key
-    const child = currentFirstChild
+    let child = currentFirstChild
 
     // 更新阶段 DOM diff 逻辑
     while (child !== null) {
