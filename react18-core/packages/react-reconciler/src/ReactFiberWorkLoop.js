@@ -4,14 +4,16 @@ import { beginWork } from './ReactFiberBeginWork'
 import { completeWork } from './ReactFiberCompleteWork'
 import { MutationMask, NoFlags } from './ReactFiberFlags'
 import { commitMutationEffectsOnFiber } from './ReactFiberCommitWork'
+import { finishQueueingConcurrentUpdates } from './ReactFiberConcurrentUpdates'
 
+// 用于记录正在工作的 Fiber 节点
 let workInProgress = null
 
 /**
  * 调度更新入口
  * @param {*} root FiberRoot
  */
-export const schedulerUpdateOnFiber = (root) => {
+export const scheduleUpdateOnFiber = (root) => {
   ensureRootIsScheduled(root)
 }
 
@@ -59,6 +61,7 @@ const renderRootSync = (root) => {
  */
 const prepareFreshStack = (root) => {
   workInProgress = createWorkInProgress(root.current, null)
+  finishQueueingConcurrentUpdates()
 }
 
 /**

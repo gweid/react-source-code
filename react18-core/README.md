@@ -21,13 +21,9 @@ react18-core/
 
 
 
-## 实现 React 18 版本
+## Fiber 架构的设计理念
 
-
-
-### Fiber 架构的设计理念
-
-#### Fiber
+### Fiber
 
 Fiber 架构之前，react 基于堆栈的递归调和算法（dom diff），这种算法在进行虚拟 DOM 比较的时候，可能会阻塞页面主线程，导致页面渲染以及用户体验差。为了解决这个问题，引入了 Fiber 架构。
 
@@ -97,7 +93,7 @@ Fiber 是一种数据结构：
 
 
 
-#### fiber 双缓存策略
+### fiber 双缓存策略
 
 React Fiber 的双缓存策略是一种优化渲染性能的核心机制，通过维护两棵 Fiber 树（current 和 workInProgress）实现无缝的 UI 更新：
 - current：当前屏幕上显示的 UI，每个 Fiber 节点通过 stateNode 关联真实 DOM
@@ -118,7 +114,7 @@ React Fiber 的双缓存策略是一种优化渲染性能的核心机制，通�
 
 
 
-#### 工作循环
+### 工作循环
 
 react 内部处理更新和渲染任务的主要过程：
 - **​​Reconciliation（协调阶段）**：遍历组件树，生成 Fiber 节点并比较新旧虚拟 DOM（Diff 算法），此阶段可中断，任务分片执行，优先级划分
@@ -126,7 +122,7 @@ react 内部处理更新和渲染任务的主要过程：
 
 
 
-#### 并发模式
+### 并发模式
 
 fiber 的并发模式通过任务分片和优先级调度，允许高优先级任务（如用户交互）中断低优先级任务（如数据加载）：
 - **任务分片​**​：通过 requestIdleCallback 或 requestAnimationFrame 将任务拆分为小单元，避免阻塞主线程
@@ -136,11 +132,11 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 
 
-### 初始化渲染
+## 初始化渲染
 
 
 
-#### 实现 jsxDEV
+### 实现 jsxDEV
 
 > jsxDEV 作用：创建虚拟 DOM
 
@@ -153,7 +149,7 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 
 
-#### 实现 createRoot
+### 实现 createRoot
 
 > react 18 引入的方法。ReactDOM.render 是在同步模式下执行的，组件更新和渲染都是同步执行，不能中断。createRoot 允许在并发模式下执行，并发模式允许 React 在渲染和更新组件时利用时间切片，使得渲染过程是可中断的，从而提高应用程序的响应性和性能
 
@@ -176,7 +172,7 @@ fiber 的并发模式通过任务分片和优先级调度，允许高优先级�
 
 
 
-#### 实现 render 函数
+### 实现 render 函数
 
 > 渲染阶段：渲染阶段又可以分为 beginWork 和 completeWork 两个阶段
 > 提交阶段：提交阶段对应着 commitWork
@@ -201,19 +197,19 @@ Fiber 节点与 虚拟 DOM：
   - updateContainer 通过 createUpdate 创建更新对象 update，将虚拟 DOM 保存到更新对象的 payload 属性中；
   - 通过 enqueueUpdate 将更新对象加入到 RootFiber.updateQueue（更新队列）中，这里面通过构造单向循环列表实现
   - enqueueUpdate 中会调用 markUpdateLaneFromFiberToRoot 函数，返回 FiberRoot 节点
-- 最后，render 函数调用 schedulerUpdateOnFiber，传入参数 FiberRoot，执行调度更新，这个是调度更新的入口
+- 最后，render 函数调用 scheduleUpdateOnFiber，传入参数 FiberRoot，执行调度更新，这个是调度更新的入口
 
 
 
-#### schedulerUpdateOnFiber
+### scheduleUpdateOnFiber
 
-> schedulerUpdateOnFiber 是调度更新的入口，流程贯穿了：beginWork、completeWork、commitWork 三个阶段
+> scheduleUpdateOnFiber 是调度更新的入口，流程贯穿了：beginWork、completeWork、commitWork 三个阶段
 >
 > 实现了：虚拟 DOM --> Fiber 树 --> 真实 DOM --> 挂载 流程
 
 ![](../imgs/img12.png)
 
-- schedulerUpdateOnFiber 函数：
+- scheduleUpdateOnFiber 函数：
   - 调用 ensureRootIsScheduled，这里面通过调度器 scheduleCallback 执行 performConcurrentWorkOnRoot 函数。
   - performConcurrentWorkOnRoot 通过 bind 绑定参数 root，确保即使在异步调度执行时，也能访问到正确的 root
 - performConcurrentWorkOnRoot 函数是并发渲染的核心函数，调度执行具体的渲染工作：
@@ -228,7 +224,7 @@ Fiber 节点与 虚拟 DOM：
 
 
 
-#### beginWork 阶段
+### beginWork 阶段
 
 > 核心作用：虚拟 DOM 转化为 Fiber 树
 
@@ -265,7 +261,7 @@ Fiber 节点与 虚拟 DOM：
 
 
 
-#### completeWork 阶段
+### completeWork 阶段
 
 > 核心作用：将 Fiber 树转化为真实 DOM
 
@@ -310,7 +306,7 @@ Fiber 节点与 虚拟 DOM：
 
 
 
-#### commitWork 阶段
+### commitWork 阶段
 
 > 核心作用：将真实 DOM 挂载到页面上，不可中断
 
@@ -335,7 +331,7 @@ commitWork 核心：
 
 
 
-#### 函数组件的初始化
+### 函数组件的初始化
 
 函数组件首先会在 beginWork 阶段，执行函数，得到虚拟 DOM，然后就是标准的流程：虚拟DOM ---> Fiber 树 ---> 真实 DOM ---> 挂载
 
@@ -347,7 +343,7 @@ commitWork 核心：
 
 
 
-### 合成事件系统
+## 合成事件系统
 
 v17.0.0 开始， react 事件是委托到 React 树的根 DOM 容器中上（#root），旧版的是委托到 document 上，这里会有差异
 
@@ -357,7 +353,7 @@ react 合成事件的核心：事件绑定与事件派发
 
 
 
-#### 事件名注册及事件绑定
+### 事件名注册及事件绑定
 
 ![](../imgs/img16.png)
 
@@ -375,7 +371,7 @@ react 合成事件的核心：事件绑定与事件派发
 
 
 
-#### 事件收集、合成、派发
+### 事件收集、合成、派发
 
 ![](../imgs/img17.png)
 
@@ -397,11 +393,11 @@ react 合成事件的核心：事件绑定与事件派发
 
 
 
-### 组件更新
+## 组件更新
 
 
 
-#### 新旧版本渲染更新流程
+### 新旧版本渲染更新流程
 
 
 
@@ -411,7 +407,7 @@ react 早期版本的 DOM Diff 是指新老虚拟 DOM 之间的比较；引入 F
 
 
 
-#### DOM Diff 整体流程
+### DOM Diff 整体流程
 
 
 
@@ -431,7 +427,7 @@ React 18 的 DOM Diff 算法基于 **Fiber 架构**，其核心方案仍延续 R
 
 
 
-#### 新虚拟 DOM 是单节点
+### 新虚拟 DOM 是单节点
 
 在 beginWork 阶段，生成新 Fiber 的时候，如果是单节点，调用 reconcileSingleElement 函数，这里面做单节点 DOM Diff：
 
@@ -449,7 +445,7 @@ React 18 的 DOM Diff 算法基于 **Fiber 架构**，其核心方案仍延续 R
 
 
 
-#### 新虚拟 DOM 是多节点
+### 新虚拟 DOM 是多节点
 
 在 beginWork 阶段，生成新 Fiber 的时候，如果是多节点，调用 reconcileChildrenArray 函数，这里面做多节点 DOM Diff。
 
@@ -488,23 +484,234 @@ React 18 的 DOM Diff 算法基于 **Fiber 架构**，其核心方案仍延续 R
 
 
 
-### 实现 Hooks
+## 实现 Hooks
+
+
+
+### Hooks 的基本逻辑
+
+![](../imgs/img20.png)
+
+
+
+### 实现 useReducer
+
+
+
+#### useReducer 基本使用
+
+```jsx
+import { useReducer } from 'react'
+import { createRoot } from 'react-dom/client'
+
+function getNum(state, action) {
+  switch (action.type) {
+    case 'add':
+      return state + action.payload
+    default:
+      return state
+  }
+}
+
+function FuncComponent() {
+  const [num, setNum] = useReducer(getNum, 0)
+
+  const handleAdd = () => {
+    setNum({ type: 'add', payload: 1 })
+  }
+
+  return (
+    <div>
+      <div>useReducer: {num}</div>
+      <div>
+        <button onClick={handleAdd}>数字加</button>
+      </div>
+    </div>
+  )
+}
+
+const root = createRoot(document.getElementById('root'))
+root.render(<FuncComponent />)
+```
+
+
+
+####useReducer 挂载
+
+
+
+**useReducer 初始定义逻辑：**
+
+useReducer 初始定义逻辑会比较绕：
+
+![](../imgs/img21.png)
+
+- 从上图可以看到，useReducer 实际上是 resolveDispatcher 函数返回 ReactCurrentDispatcher.current 创建的
+- 而将  ReactCurrentDispatcher 放到了ReactSharedInternals 中，最后在 shared 目录下的 ReactSharedInternals.js 进行导出，好处：
+  - shared 包是全局公共的，如果需要使用 ReactSharedInternals 就从这个全局公共的包里面找
+  - 而不是在 react 包里面找，这样可以保证后面 react 包里面的 ReactSharedInternals 有什么变化，只需要改这里
+
+
+
+**useReducer挂载：**
+
+useReducer 的挂载了，主要就是：ReactCurrentDispatcher.current 的赋值
+
+Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值，会在 beginWork 阶段处理函数组件过程中，在 renderWithHooks 函数中：
+
+![](../imgs/img22.png)
+
+- renderWithHooks 入口中，会给 ReactCurrentDispatcher.current 赋值为 HooksDispatcherOnMount（因为 hook 要能拿到函数组件状态，所以需要在这里）
+- HooksDispatcherOnMount 中定义了 useReducer 函数为 mountReducer
+- mountReducer 中：
+  - 通过 mountWorkInProgressHook 创建 hook 对象（包含 memoizedState 状态值、queue 更新队列、next指针等），并通过 next 形成 hook 链表（next 指向下一个 hook），返回这个 hook 链表
+  - 给 hook 链表添加更新队列 queue
+  - 通过 dispatchReducerAction.bind 初始一个 dispatch 函数。当执行这个函数时，**内部会调用 scheduleUpdateOnFiber 会执行调度更新**
+  - 将 dispatch 函数保存到 hook.queue.dispatch 中，方便后面更新阶段使用
+  - 最后返回初始值，和 dispatch 函数：[初始值, dispatch]
+
+
+
+#### useReducer 更新
+
+更新，会涵盖：beginWork、completeWork、commitWork 三个阶段：
+
+
+
+**调度阶段：**
+
+- 触发事件，执行 useReducer 的 dispatch （上面例子的 setNum）函数，这实际上就是执行 dispatchReducerAction 函数
+
+- dispatchReducerAction 会执行三步：
+
+  - 创建更新对象 update，并将更新动作 action 放进去
+
+  - 调用 enqueueConcurrentHookUpdate：
+
+    - 通过 enqueueUpdate 将 fiber、queue、update 存储到全局变量 concurrentQueue 中，便于后面使用
+
+      > 例如：
+      >
+      > setCount(1); *// 加入并发队列*
+      >
+      > setCount(2); *// 加入并发队列*
+      >
+      > 
+      >
+      > concurrentQueue存储的就是：[fiber, queue, { action: 1 }, fiber, queue, { action: 2 }]
+
+    - 通过当前 Fiber 向上遍历拿到 FiberRoot 节点，并返回
+
+  - 调用 scheduleUpdateOnFiber(FiberRoot) 执行调度更新
+
+- scheduleUpdateOnFiber 调度更新会进入 workLoopSync 循环，然后进入 beginWork 阶段
+
+
+
+**批量处理并发更新队列：**
+
+在进入 beginWork 阶段之前，先处理在调度阶段存储到全局变量 concurrentQueue 中的更新关系
+
+- 在执行 workLoopSync 循环之前，会调用 prepareFreshStack 创建新 Fiber（workInProgress）
+
+- 在 prepareFreshStack 创建完新 Fiber（workInProgress）后，调用 finishQueueingConcurrentUpdates，这个函数就是批量处理并发更新队列的，将多个并发的状态更新（如 useReducer）合并到对应 Fiber 节点的更新队列（queue.pending）中
+
+  - 会形成单向链表
+
+    > update2.next = update1.next; // update2.next → update1
+    > update1.next = update2;      // update1.next → update2
+    > queue.pending = update2;    // 头指针指向最新 update
+    >
+    > 
+    >
+    > queue.pending：始终指向最新的更新
+    >
+    > update.next：指向下一个更新
+
+
+
+**beginWork 阶段：**
+
+- 在 beginWork 阶段会进入到函数组件更新判断的分支，执行 updateFunctionComponent 进行函数组件更新操作
+  - 这个函数又会执行一遍 renderWithHooks，这次的 renderWithHooks 会做两件事对 useReducer 产生影响
+    - 首先，这次执行 renderWithHooks 会判断是更新阶段，那么会 `ReactCurrentDispatcher.current = HooksDispatcherOnUpdate`，使用更新阶段的函数 HooksDispatcherOnUpdate
+    - 然后执行 Component(props) 重新执行函数组件
+  - renderWithHooks 中重新执行了函数组件，此时又会执行到 useReducer hook 了，但是这次 useReducer 不再是初始化阶段的 mountReducer，而是更新阶段的 updateReducer，因为上面已经将 `ReactCurrentDispatcher.current` 重新赋值
+- 执行 updateReducer：
+  - 首先，通过 updateWorkInProgressHook 生成新 Hook 对象
+    - 通过 next 将所有的 hook 进行关联，hook1 --> hook2 --> hook3，建立链表
+    - 此时新的 hook 的 memoizedState 仍然还是旧 hook 的 memoizedState 值
+  - 拿到新 Hook 对象后，对新 Hook 对象进行加工
+    - 通过 queue.pending 拿到 update 队列，通过 update 拿到 action 更新动作（关系在 finishQueueingConcurrentUpdates 中建立）
+    - 调用传入的 reducer 函数，传参是原来值和更新动作 action，得到新的 state 值
+    - 从 hook.queue 中拿到在初始化阶段存入的 dispatch 函数
+    - 最后返回新值 newState 和 dispatch 函数
+- 至此，useReducer 在 beginWork 阶段完，接着进入 completeWork 阶段继续处理
+
+
+
+**completeWork 阶段：**
+
+按照 react 渲染流程，执行完 beginWork 阶段，就会进入 completeWork 阶段，在 completeWork 阶段涉及对 useReducer 的处理：
+
+- 首先，进入原生节点分支判断，这里面判断，如果是更新阶段，调用 updateHostComponent 函数
+- updateHostComponent 函数：
+  - 调用 prepareUpdate 生成更新描述
+  - 将更新描述挂载到 workInProgress.updateQueue = updatePayload 上，给 commitWork 阶段使用
+  - 给当前 Fiber 标记更新：workInProgress.flags |= Update，便于在 commitWork 阶段判断是更新
+- prepareUpdate 函数中会调用 diffProperties，这个是生成更新描述的主要函数
+  - 遍历旧 props，查找在 nextProps 中不存在的属性，属性移除
+  - 遍历新 props，处理属性更新和添加
+  - 会对特殊属性做处理，比如 style、children
+    - children 如果是文本节点，会直接将这个加入到更新描述中，因为文本节点可以在 commitWork 阶段直接挂载，而不需要生成 Fiber
+  - 最后得到更新描述，更新描述的格式类似：['style', {color: 'red'}, 'children', '123']，就是 [key, value, key, value, ...] 格式
+- 到此，useReducer 在 completeWork 阶段完，进入 commitWork 阶段继续处理
+
+
+
+**commitWork 阶段：**
+
+进入到在 commitWork 阶段后：
+
+- 首先是入口 commitMutationEffectsOnFiber 函数中
+  - 会调用 commitReconciliationEffects 先进行标签的渲染，当标签渲染完后，
+  - 判断 workInProgress.flags 被打上更新标记，并且拿到更新描述 updatePayload，最后调用 commitUpdate 开始更新属性
+- commitUpdate 中调用 updateProperties 更新属性
+  - 更新样式
+  - 如果是 children 类型，并且是文本类型，直接 textContent 修改文本
+  - 更新其它属性
+
+
+
+### 实现 useState
 
 
 
 
 
-### Lane 模型与优先级
+### 实现 useEffect
 
 
 
 
 
-### 调度系统
+### 实现 useLayoutEffect
 
 
 
 
 
-### 并发渲染
+## Lane 模型与优先级
+
+
+
+
+
+## 调度系统
+
+
+
+
+
+## 并发渲染
 

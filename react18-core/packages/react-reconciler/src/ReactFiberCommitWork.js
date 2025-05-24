@@ -1,21 +1,53 @@
 import { FunctionComponent, HostRoot, HostComponent, HostText } from './ReactWorkTags'
 import { MutationMask } from './ReactFiberFlags'
-import { Placement } from './ReactFiberFlags'
-import { appendChild, insertBefore } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
+import { Placement, Update } from './ReactFiberFlags'
+import { appendChild, insertBefore, commitUpdate } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
 
 /**
- *  遍历 Fiber 树并在每个 Fiber 上应用副作用
+ *  遍历 Fiber 树并在每个 Fiber 上应用副作用（commitWork 阶段核心入口函数）
  * @param {*} finishedWork 最新的可展示的 Fiber 树
  * @param {*} root FiberRoot
  */
 export const commitMutationEffectsOnFiber = (finishedWork, root) => {
+  const current = finishedWork.alternate // 老 Fiber
+  const flags = finishedWork.flags
+
   switch (finishedWork.tag) {
     case FunctionComponent:
     case HostRoot:
-    case HostComponent:
     case HostText:
       recursivelyTraverseMutationEffects(root, finishedWork)
       commitReconciliationEffects(finishedWork)
+
+      // 更新阶段......
+      break
+    case HostComponent:
+      recursivelyTraverseMutationEffects(root, finishedWork)
+      commitReconciliationEffects(finishedWork)
+
+      /**
+       * 如果 flags 中包含 Update，那么进入更新
+       * 这里的更新，是更新属性，因为标签在 commitReconciliationEffects 已经做了插入
+       * 
+       * 什么时候打上的 Update 标记？在 completeWork 阶段通过函数 markUpdate 添加
+       */
+      if (flags & Update) {
+        const instance = finishedWork.stateNode
+
+        if (instance !== null) {
+          const newProps = finishedWork.memoizedProps
+          const oldProps = current !== null ? current.memoizedProps : newProps
+          const type = finishedWork.type
+
+          // updatePayload 在 completeWork 阶段通过函数 prepareUpdate 调用 diffProperties 函数添加
+          const updatePayload = finishedWork.updateQueue
+          finishedWork.updateQueue = null // 清空 updateQueue
+
+          if (updatePayload) {
+            commitUpdate(instance, updatePayload, type, oldProps, newProps, finishedWork)
+          }
+        }
+      }
     default:
       break
   }
@@ -51,8 +83,8 @@ const commitReconciliationEffects = (finishedWork) => {
 }
 
 /**
- * 
- * @param {*} finishedWork 
+ * 真实 DOM 渲染到页面
+ * @param {*} finishedWork 最新的可展示的 Fiber 树
  */
 const commitPlacement = (finishedWork) => {
   const parentFiber = getHostParentFiber(finishedWork)

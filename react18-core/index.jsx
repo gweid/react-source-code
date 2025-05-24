@@ -6,8 +6,6 @@
 // ----------------------- 初始化渲染 -----------------------
 // import { createRoot } from 'react-dom/client'
 
-// const root = createRoot(document.getElementById('root'))
-
 // const element = (
 //   <div key='divKey'>
 //     <h1>Hello, world!</h1>
@@ -22,6 +20,7 @@
 //   </div>
 // )
 
+// const root = createRoot(document.getElementById('root'))
 // root.render(element)
 // console.log(element)
 
@@ -53,8 +52,6 @@
 
 // ----------------------- 合成事件系统 -----------------------
 // import { createRoot } from 'react-dom/client'
-
-// const root = createRoot(document.getElementById('root'))
 
 // function FuncComponent() {
 //   const handleParentClick = (e) => {
@@ -90,46 +87,42 @@
 //   )
 // }
 
+// const root = createRoot(document.getElementById('root'))
 // root.render(<FuncComponent />)
 
 
-// ----------------------- 组件更新和 Hooks -----------------------
+// ----------------------- useReducer -----------------------
+import { useReducer } from 'react'
 import { createRoot } from 'react-dom/client'
 
-const root = createRoot(document.getElementById('root'))
+function getNum(state, action) {
+  switch (action.type) {
+    case 'add':
+      return state + action.payload
+    default:
+      return state
+  }
+}
 
 function FuncComponent() {
-  const handleParentClick = (e) => {
-    console.log('父节点')
-  }
+  const [num, setNum] = useReducer(getNum, 0)
 
-  const handleParentClickCapture = (e) => {
-    console.log('父节点capture')
-  }
-
-  const handleChildClick = (e) => {
-    console.log('子节点')
-    // e.stopPropagation()
-  }
-
-  const handleChildClickCapture = (e) => {
-    console.log('子节点capture')
+  const handleAdd = () => {
+    setNum({ type: 'add', payload: 1 })
   }
 
   return (
-    <div
-      style={{ width: '200px', height: '200px', border: '1px solid #ccc'}}
-      onClick={handleParentClick}
-      onClickCapture={handleParentClickCapture}
-    >
-      <button
-        onClick={handleChildClick}
-        onClickCapture={handleChildClickCapture}
-      >
-        子节点
-      </button>
+    // <div>
+    //   <button onClick={handleAdd}>num++：{num}</button>
+    // </div>
+
+    // 这里只能先这样，不能像上面那样，因为上面那样在 react 中的 
+    // diffProperties 处理子节点 children 时 nextProp 会被处理成数组，现在还不支持数组
+    <div>
+        <button onClick={handleAdd}>{num}</button>
     </div>
   )
 }
 
+const root = createRoot(document.getElementById('root'))
 root.render(<FuncComponent />)

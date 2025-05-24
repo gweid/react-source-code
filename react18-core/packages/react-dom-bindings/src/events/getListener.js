@@ -12,6 +12,7 @@ const getListener = (instance, registrationName) => {
   if (stateNode === null) return null
 
   // 根据真实 DOM 获取挂载在真实 DOM 上的 props
+  // 在初始化阶段或者更新阶段的 completeWork 中，都会将 props 挂载到真实 DOM 上
   const props = getFiberCurrentPropsFromNode(stateNode)
 
   if (props === null) return null

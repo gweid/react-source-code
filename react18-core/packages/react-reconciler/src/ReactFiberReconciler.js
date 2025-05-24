@@ -1,6 +1,6 @@
 import { createFiberRoot } from './ReactFiberRoot'
 import { createUpdate, enqueueUpdate } from './ReactFiberClassUpdateQueue'
-import { schedulerUpdateOnFiber } from './ReactFiberWorkLoop'
+import { scheduleUpdateOnFiber } from './ReactFiberWorkLoop'
 
 /**
  * 创建 FiberRoot
@@ -30,5 +30,5 @@ export const updateContainer = (element, container) => {
   const root = enqueueUpdate(current, update)
 
   // 调度更新（调度更新的入口函数）
-  schedulerUpdateOnFiber(root)
+  scheduleUpdateOnFiber(root)
 }

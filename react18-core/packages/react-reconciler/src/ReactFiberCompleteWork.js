@@ -2,10 +2,11 @@ import {
   createInstance,
   createTextInstance,
   appendInitialChild,
-  finalizeInitialChildren
+  finalizeInitialChildren,
+  prepareUpdate
 } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
-import { NoFlags } from "./ReactFiberFlags"
-import { HostComponent, HostRoot, HostText } from "./ReactWorkTags"
+import { NoFlags, Update } from "./ReactFiberFlags"
+import { HostComponent, HostRoot, HostText, FunctionComponent } from "./ReactWorkTags"
 
 /**
  * 将 Fiber 转换为真实 DOM 节点
@@ -24,19 +25,32 @@ export const completeWork = (current, workInProgress) => {
     case HostComponent:
       // 原生标签
       const { type } = workInProgress
-      // 创建真实 DOM 节点
-      const instance = createInstance(type, newProps, workInProgress)
 
-      // 内部做循环，把所有子 DOM 追加到 父 DOM 上
-      appendAllChildren(instance, workInProgress)
+      if (current !== null && workInProgress.stateNode !== null) {
+        // 如果是更新阶段
+        updateHostComponent(current, workInProgress, type, newProps)
+      } else {
+        // 初始化阶段
 
-      // 将真实 DOM 关联到 stateNode 属性
-      workInProgress.stateNode = instance
-
-      // 为 DOM 元素设置属性
-      finalizeInitialChildren(instance, type, newProps)
+        // 创建真实 DOM 节点
+        const instance = createInstance(type, newProps, workInProgress)
+  
+        // 内部做循环，把所有子 DOM 追加到 父 DOM 上
+        appendAllChildren(instance, workInProgress)
+  
+        // 将真实 DOM 关联到 stateNode 属性
+        workInProgress.stateNode = instance
+  
+        // 为 DOM 元素设置属性
+        finalizeInitialChildren(instance, type, newProps)
+      }
 
       // 做 subtreeFlags 标记
+      bubbleProperties(workInProgress)
+      break;
+    case FunctionComponent:
+      // 函数组件
+      // 函数组件的标签是不需要创建 DOM 节点的，只做 subtreeFlags 标记
       bubbleProperties(workInProgress)
       break;
     case HostText:
@@ -47,6 +61,37 @@ export const completeWork = (current, workInProgress) => {
       // 做 subtreeFlags 标记
       bubbleProperties(workInProgress)
       break;
+  }
+}
+
+/**
+ * 标记更新
+ * @param {*} workInProgress 新的 Fiber 树
+ */
+const markUpdate = (workInProgress) => {
+  workInProgress.flags |= Update
+}
+
+/**
+ * 更新阶段：生成更新描述，打上更新标记，便于 commitWork 阶段使用
+ * @param {*} current 旧的 Fiber 树
+ * @param {*} workInProgress 新的 Fiber 树
+ * @param {*} type 原生标签类型
+ * @param {*} newProps 新的 props
+ */
+const updateHostComponent = (current, workInProgress, type, newProps) => {
+  const oldProps = current.memoizedProps
+  const instance = workInProgress.stateNode // 获取真实 DOM
+
+  // 生成更新描述 updatePayload
+  const updatePayload = prepareUpdate(instance, type, oldProps, newProps)
+
+  // 将更新描述放到新 Fiber 的 updateQueue 属性上
+  workInProgress.updateQueue = updatePayload
+
+  if (updatePayload) {
+    // 打上更新标记，用于 commitWork 阶段使用
+    markUpdate(workInProgress)
   }
 }
 

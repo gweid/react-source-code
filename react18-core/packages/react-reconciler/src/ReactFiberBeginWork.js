@@ -19,7 +19,13 @@ import { renderWithHooks } from './ReactFiberHooks'
 export const beginWork = (current, workInProgress) => {
   switch (workInProgress.tag) {
     case IndeterminateComponent:
+      // 首次渲染，workInProgress.tag 不确定时走这个函数处理
       return mountIndeterminateComponent(current, workInProgress, workInProgress.type)
+    case FunctionComponent:
+      // 更新阶段，已经确认时函数组件，直接走这里处理函数组件
+      const Component = workInProgress.type
+      const nextProps = workInProgress.pendingProps
+      return updateFunctionComponent(current, workInProgress, Component, nextProps)
     case HostRoot:
       return updateHostRoot(current, workInProgress)
     case HostComponent:
@@ -34,11 +40,13 @@ export const beginWork = (current, workInProgress) => {
 }
 
 /**
- * 更新函数组件的 Fiber 节点
+ * workInProgress.tag 不确定时的处理
+ * 这是首次渲染，workInProgress.tag 不确定时对函数组件的处理
+ * 这里如果确定是函数组件，会： workInProgress.tag = FunctionComponent
  * @param {*} current 当前屏幕上显示的内容对应的 Fiber 树
  * @param {*} workInProgress 正在构建的 Fiber 树
  * @param {*} Component 函数组件的函数 () => {}
- * @returns 
+ * @returns 第一个子 Fiber 节点
  */
 const mountIndeterminateComponent = (current, workInProgress, Component) => {
   const props = workInProgress.pendingProps
@@ -50,6 +58,24 @@ const mountIndeterminateComponent = (current, workInProgress, Component) => {
 
   // 协调子节点，生成子 Fiber 树
   reconcileChildren(current, workInProgress, value)
+
+  // 返回第一个子 Fiber 节点
+  return workInProgress.child
+}
+
+/**
+ * 更新函数组件的 Fiber 节点
+ * @param {*} current 当前屏幕上显示的内容对应的 Fiber 树
+ * @param {*} workInProgress 正在构建的 Fiber 树
+ * @param {*} Component 函数组件的函数 () => {}
+ * @param {*} nextProps 新的 props
+ * @returns 第一个子 Fiber 节点
+ */
+const updateFunctionComponent = (current, workInProgress, Component, nextProps) => {
+  const nextChildren = renderWithHooks(current, workInProgress, Component, nextProps)
+
+  // 协调子节点，生成子 Fiber 树
+  reconcileChildren(current, workInProgress, nextChildren)
 
   // 返回第一个子 Fiber 节点
   return workInProgress.child
