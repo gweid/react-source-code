@@ -638,8 +638,10 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
     - 然后执行 Component(props) 重新执行函数组件
   - renderWithHooks 中重新执行了函数组件，此时又会执行到 useReducer hook 了，但是这次 useReducer 不再是初始化阶段的 mountReducer，而是更新阶段的 updateReducer，因为上面已经将 `ReactCurrentDispatcher.current` 重新赋值
 - 执行 updateReducer：
-  - 首先，通过 updateWorkInProgressHook 生成新 Hook 对象
-    - 通过 next 将所有的 hook 进行关联，hook1 --> hook2 --> hook3，建立链表
+  - 首先，调用 updateWorkInProgressHook 生成新 Hook 对象
+    - 先拿到旧 Hook 对象
+    - 创建新 Hook 对象，将旧 Hook 对象的 memoizedState 和 queue 赋值给新 Hook
+    - 通过 next 将所有的 hook 进行关联，hook1 --> hook2 --> hook3，建立链表（多个 hook 执行，useReducer1、useReducer2）
     - 此时新的 hook 的 memoizedState 仍然还是旧 hook 的 memoizedState 值
   - 拿到新 Hook 对象后，对新 Hook 对象进行加工
     - 通过 queue.pending 拿到 update 队列，通过 update 拿到 action 更新动作（关系在 finishQueueingConcurrentUpdates 中建立）
