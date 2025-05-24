@@ -43,7 +43,7 @@ const getRootForUpdatedFiber = (sourceFiber) => {
 
 
 /**
- * 
+ * 将 fiber, queue, update 存到全局变量 concurrentQueue 中，并拿到 FiberRoot 后返回
  * @param {*} fiber // 正在构建的 Fiber
  * @param {*} queue // 更新队列
  * @param {*} update // 更新对象：{ action, next }
@@ -54,6 +54,12 @@ export const enqueueConcurrentHookUpdate = (fiber, queue, update) => {
   return getRootForUpdatedFiber(fiber)
 }
 
+/**
+ * 将 fiber, queue, update 存到全局变量 concurrentQueue 中
+ * @param {*} fiber // 正在构建的 Fiber
+ * @param {*} queue // 更新队列 { pending: null }
+ * @param {*} update // 更新对象：{ action, next: null }
+ */
 const enqueueUpdate = (fiber, queue, update) => {
   // 这里的 concurrentQueuesIndex++ 会不断将 concurrentQueuesIndex + 1
   concurrentQueue[concurrentQueuesIndex++] = fiber
