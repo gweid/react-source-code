@@ -84,7 +84,7 @@ const updateDOMProperties = (domElement, updatePayload) => {
 }
 
 /**
- * 对比新旧 props（oldProps 和 newProps），找出需要 ​​新增、更新或删除​​ 的 DOM 属性
+ * 对比新旧 props（oldProps 和 newProps），找出需要 新增、更新或删除​​ 的 DOM 属性
  * 返回一个 ​​更新 payload 对象​​（称为 updatePayload），标记哪些属性需要修改，供 commitUpdate 阶段使用
  * 
  * 流程：

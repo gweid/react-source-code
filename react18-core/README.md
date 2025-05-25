@@ -553,7 +553,7 @@ useReducer 初始定义逻辑会比较绕：
 
 
 
-**useReducer挂载：**
+**useReducer 挂载：**
 
 useReducer 的挂载了，主要就是：ReactCurrentDispatcher.current 的赋值
 
@@ -564,8 +564,10 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
 - renderWithHooks 入口中，会给 ReactCurrentDispatcher.current 赋值为 HooksDispatcherOnMount（因为 hook 要能拿到函数组件状态，所以需要在这里）
 - HooksDispatcherOnMount 中定义了 useReducer 函数为 mountReducer
 - mountReducer 中：
-  - 通过 mountWorkInProgressHook 创建 hook 对象（包含 memoizedState 状态值、queue 更新队列、next指针等），并通过 next 形成 hook 链表（next 指向下一个 hook），返回这个 hook 链表
-  - 给 hook 链表添加更新队列 queue
+  - 通过 mountWorkInProgressHook 创建 hook 对象（包含 memoizedState 状态值、queue 更新队列、next指针等），给 memoizedState 赋值初始值，并通过 next 形成 hook 链表（next 指向下一个 hook），返回这个 hook 链表
+  - 给 hook 链表添加更新队列 queue，queue 参数：
+    - pending： 指向最新的 update 对象
+    - dispatch：调度器
   - 通过 dispatchReducerAction.bind 初始一个 dispatch 函数。当执行这个函数时，**内部会调用 scheduleUpdateOnFiber 会执行调度更新**
   - 将 dispatch 函数保存到 hook.queue.dispatch 中，方便后面更新阶段使用
   - 最后返回初始值，和 dispatch 函数：[初始值, dispatch]
@@ -685,9 +687,142 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
 
 
 
+#### useReducer 流程
+
+根据上面的挂载和更新阶段，归纳的流程：
+
+![](../imgs/img24.png)
+
+
+
 ### 实现 useState
 
+useState 基本是基于 useReducer 的，实现上有一点差异
 
+
+
+#### useState 挂载
+
+
+
+**useState 初始定义：**
+
+基本跟 useReducer 一致
+
+```js
+// packages/react/src/ReactHooks.js
+export const useState = (initialState) => {
+  const dispatcher = resolveDispatcher()
+  return dispatcher.useState(initialState)
+}
+
+
+// packages/react/src/React.js
+import { useReducer, useState } from './ReactHooks'
+
+export {
+  useReducer,
+  useState,
+}
+
+
+// packages/react/index.js
+export {
+  useReducer,
+  useState
+} from './src/React'
+```
+
+
+
+**useState 挂载**
+
+挂载阶段，与 useReducer 差不多：
+
+- HooksDispatcherOnMount 对象，添加一个 useState，使用 mountState 函数
+
+- mountState 函数中：
+
+  - 通过 mountWorkInProgressHook 创建 hook 对象（包含 memoizedState 状态值、queue 更新队列、next指针等），给 memoizedState 赋值初始值，并通过 next 形成 hook 链表（next 指向下一个 hook），返回这个 hook 链表
+
+  - 给 hook 链表添加更新队列 queue，queue 参数与 useReducer 有差异，多了 lastRenderedState 和 lastRenderedReducer
+
+    >```js
+    >/**
+    > * lastRenderedState 和 lastRenderedReducer 主要用来做优化
+    > * 用于在更新时比较新旧 state，避免不必要的渲染
+    > */
+    >const queue = {
+    >  pending: null, // 指向最新的 update 对象
+    >  dispatch: null, // 调度器
+    >  lastRenderedState: initialState, // 上一次渲染的 state
+    >  lastRenderedReducer: baseStateReducer // 上一次渲染的 reducer
+    >}
+    >```
+
+  - 通过 dispatchSetState.bind 初始一个 dispatch 函数。当执行这个函数时，**内部会调用 scheduleUpdateOnFiber 会执行调度更新**（这里的绑定的 dispatch 函数与 useReducer 有点差异）
+
+  - 将 dispatch 函数保存到 hook.queue.dispatch 中，方便后面更新阶段使用
+
+  - 最后返回 初始值 和 dispatch 函数 [state, dispatch]
+
+
+
+#### useState 更新
+
+useState 的更新基本就是复用的 useReducer，只是在更新之前的调度 dispatch 与 useReducer 有略微差异
+
+
+
+- 定义 updateState
+
+  ```js
+  /**
+   * 更新阶段的 useState
+   * @returns [state, dispatch]
+   */
+  function updateState() {
+    return updateReducer(baseStateReducer)
+  }
+  
+  function baseStateReducer(state, action) {
+    // action 就是 setState 的参数，判断传入的是 值 还是 函数
+    // setNum(2)
+    // setNum((prev) => prev + 1)
+    return typeof action === 'function' ? action(state) : action
+  }
+  ```
+
+- dispatchSetState 函数的定义
+
+  ```js
+  const dispatchSetState = (fiber, queue, action) => {
+    const update = {
+      action,
+      hasEagerState: false, // 是否有急切的状态
+      eagerState: null, // 急切的状态值
+      next: null
+    }
+  
+    const { lastRenderedReducer, lastRenderedState } = queue
+  
+    // action 就是 setState 的参数，可能是 值 或者 函数
+    const eagerState = lastRenderedReducer(lastRenderedState, action)
+    update.hasEagerState = true
+    update.eagerState = eagerState
+  
+    // 优化：如果值一样，就不需要更新
+    if (objectIs(eagerState, lastRenderedState)) {
+      return
+    }
+  
+    const root = enqueueConcurrentHookUpdate(fiber, queue, update)
+  
+    scheduleUpdateOnFiber(root)
+  }
+  ```
+
+  - 可以看到，会在调度更新前做优化，判断值是否相同，是就不执行调度更新
 
 
 

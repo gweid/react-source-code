@@ -92,23 +92,54 @@
 
 
 // ----------------------- useReducer -----------------------
-import { useReducer } from 'react'
+// import { useReducer } from 'react'
+// import { createRoot } from 'react-dom/client'
+
+// function getNum(state, action) {
+//   switch (action.type) {
+//     case 'add':
+//       return state + action.payload
+//     default:
+//       return state
+//   }
+// }
+
+// function FuncComponent() {
+//   const [num, setNum] = useReducer(getNum, 0)
+
+//   const handleAdd = () => {
+//     setNum({ type: 'add', payload: 1 })
+//   }
+
+//   return (
+//     // <div>
+//     //   <button onClick={handleAdd}>num++：{num}</button>
+//     // </div>
+
+//     // 这里只能先这样，不能像上面那样，因为上面那样在 react 中的 
+//     // diffProperties 处理子节点 children 时 nextProp 会被处理成数组，现在还不支持数组
+//     <div>
+//         <button onClick={handleAdd}>{num}</button>
+//     </div>
+//   )
+// }
+
+// const root = createRoot(document.getElementById('root'))
+// root.render(<FuncComponent />)
+
+
+// ----------------------- useState 函数初始化 -----------------------
+import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
-function getNum(state, action) {
-  switch (action.type) {
-    case 'add':
-      return state + action.payload
-    default:
-      return state
-  }
-}
-
 function FuncComponent() {
-  const [num, setNum] = useReducer(getNum, 0)
+  // 使用函数作为初始值
+  const [num, setNum] = useState(0)
+  const [count, setCount] = useState(0)
 
   const handleAdd = () => {
-    setNum({ type: 'add', payload: 1 })
+    setNum(num + 1)
+    setCount(count + 2)
   }
 
   return (
@@ -120,6 +151,7 @@ function FuncComponent() {
     // diffProperties 处理子节点 children 时 nextProp 会被处理成数组，现在还不支持数组
     <div>
         <button onClick={handleAdd}>{num}</button>
+        <button onClick={handleAdd}>{count}</button>
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import objectIs from 'shared/objectIs'
 import ReactSharedInternals from 'shared/ReactSharedInternals'
 import { enqueueConcurrentHookUpdate } from './ReactFiberConcurrentUpdates'
 import { scheduleUpdateOnFiber } from './ReactFiberWorkLoop'
@@ -22,37 +23,29 @@ let currentHook = null // 当前正在复用的旧 Hook 节点​​
 
 // 挂载阶段的 Hook
 const HooksDispatcherOnMount = {
-  useReducer: mountReducer
+  useReducer: mountReducer,
+  useState: mountState
 }
 
 // 更新阶段的 Hook
 const HooksDispatcherOnUpdate = {
-  useReducer: updateReducer
+  useReducer: updateReducer,
+  useState: updateState
 }
 
-/**
- * 调度
- * @param {*} fiber // 正在构建的 Fiber
- * @param {*} queue // 更新队列
- * @param {*} action // 更新动作
- */
-const dispatchReducerAction = (fiber, queue, action) => {
-  const update = {
-    action,
-    next: null
-  }
 
-  // 拿到 FiberRoot
-  const root = enqueueConcurrentHookUpdate(fiber, queue, update)
-
-  // 调度更新
-  scheduleUpdateOnFiber(root)
+function basicStateReducer(state, action) {
+  // action 就是 setState 的参数，判断传入的是 值 还是 函数
+  // setNum(2)
+  // setNum((prev) => prev + 1)
+  return typeof action === 'function' ? action(state) : action
 }
 
 /**
  * 挂载阶段的 useReducer
  * @param {*} reducer reducer 函数
  * @param {*} initialArg 初始值
+ * @returns [state, dispatch]
  */
 function mountReducer(reducer, initialArg) {
   const hook = mountWorkInProgressHook()
@@ -61,7 +54,7 @@ function mountReducer(reducer, initialArg) {
   hook.memoizedState = initialArg
 
   const queue = {
-    pending: null, // 待处理队列
+    pending: null, // 指向最新的 update 对象
     dispatch: null // 调度器
   }
   hook.queue = queue
@@ -80,13 +73,14 @@ function mountReducer(reducer, initialArg) {
 /**
  * 更新阶段的 useReducer
  * @param {*} reducer reducer 函数
+ * @returns [state, dispatch]
  */
 function updateReducer(reducer) {
   const hook = updateWorkInProgressHook()
 
   // queue 和 update 关系，在函数 finishQueueingConcurrentUpdates 中建立
   const queue = hook.queue
-  const current = currentHook // 当前正在复用的旧 Hook 节点
+  const current = currentHook // 拿到正在复用的旧 Hook 节点
   const pendingQueue = queue.pending
 
   // 获取老的值
@@ -95,7 +89,7 @@ function updateReducer(reducer) {
   if (pendingQueue !== null) {
     queue.pending = null
 
-    // pendingQueue.next
+    // 记录第一个 update 对象，给后面比较用，主要是为了打断循环
     const firstUpdate = pendingQueue.next
 
     let update = firstUpdate
@@ -114,6 +108,93 @@ function updateReducer(reducer) {
 
   return [hook.memoizedState, dispatch]
 }
+
+/**
+ * 挂载阶段的 useState
+ * @param {*} initialState 初始值
+ * @returns [state, dispatch]
+ */
+function mountState(initialState) {
+  const hook = mountWorkInProgressHook()
+
+  hook.memoizedState = initialState
+
+  /**
+   * lastRenderedState 和 lastRenderedReducer 主要用来做优化
+   * 用于在更新时比较新旧 state，避免不必要的渲染
+   */
+  const queue = {
+    pending: null, // 指向最新的 update 对象
+    dispatch: null, // 调度器
+    lastRenderedState: initialState, // 上一次渲染的 state
+    lastRenderedReducer: basicStateReducer // 上一次渲染的 reducer
+  }
+  hook.queue = queue
+
+  const dispatch = queue.dispatch = dispatchSetState.bind(null, currentlyRenderingFiber, queue)
+
+  return [hook.memoizedState, dispatch]
+}
+
+/**
+ * 更新阶段的 useState
+ * @returns [state, dispatch]
+ */
+function updateState() {
+  return updateReducer(basicStateReducer)
+}
+
+
+/**
+ * useReducer 调度（dispatch）函数
+ * @param {*} fiber // 正在构建的 Fiber
+ * @param {*} queue // 更新队列
+ * @param {*} action // 更新动作
+ */
+const dispatchReducerAction = (fiber, queue, action) => {
+  const update = {
+    action,
+    next: null
+  }
+
+  // 拿到 FiberRoot
+  const root = enqueueConcurrentHookUpdate(fiber, queue, update)
+
+  // 调度更新
+  scheduleUpdateOnFiber(root)
+}
+
+/**
+ * useState 调度（dispatch）函数
+ * @param {*} fiber fiber 节点
+ * @param {*} queue 更新队列
+ * @param {*} action 更新动作
+ */
+const dispatchSetState = (fiber, queue, action) => {
+  const update = {
+    action,
+    hasEagerState: false, // 是否有急切的状态
+    eagerState: null, // 急切的状态值
+    next: null
+  }
+
+  const { lastRenderedReducer, lastRenderedState } = queue
+
+  // action 就是 setState 的参数，可能是 值 或者 函数
+  const eagerState = lastRenderedReducer(lastRenderedState, action)
+  update.hasEagerState = true
+  update.eagerState = eagerState
+
+  // 优化：如果值一样，就不需要更新
+  if (objectIs(eagerState, lastRenderedState)) {
+    return
+  }
+
+  const root = enqueueConcurrentHookUpdate(fiber, queue, update)
+
+  scheduleUpdateOnFiber(root)
+}
+
 
 /**
  * 初始化一个 hook，并形成链表
@@ -144,6 +225,7 @@ const mountWorkInProgressHook = () => {
  * @returns 新的 hook 链表
  */
 const updateWorkInProgressHook = () => {
+  // currentHook 当前正在复用的旧 Hook 节点​​
   // currentHook 是 null，就是第一次执行更新 hook，那么拿到第一个 hook 进行更新操作
   if (currentHook === null) {
     // 拿到 CurrentFiber 树，就是老的 Fiber
@@ -173,7 +255,7 @@ const updateWorkInProgressHook = () => {
 }
 
 /**
- * 获取函数组件的虚拟 DOM，并设置 hook 执行环境
+ * 调用函数组件，获取函数组件的虚拟 DOM，并设置 hook 执行环境
  * @param {*} current 当前屏幕上显示的内容对应的 Fiber 树
  * @param {*} workInProgress 正在构建的 Fiber 树（新Fiber）
  * @param {*} Component 函数组件的函数 () => {}
@@ -184,7 +266,7 @@ export function renderWithHooks(current, workInProgress, Component, props) {
   // 将正在构建的 Fiber 树赋值给全局变量 currentlyRenderingFiber
   currentlyRenderingFiber = workInProgress
 
-  // Hook需要在调用 Component 之前
+  // Hook 使用之前，需要先定义，Component 执行就是执行函数组件，里面会执行 hook
   // 区分挂载/更新阶段，选择 Hooks 的 dispatcher
   if (current !== null && current.memoizedState !== null) {
     ReactCurrentDispatcher.current = HooksDispatcherOnUpdate

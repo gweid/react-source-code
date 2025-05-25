@@ -8,3 +8,8 @@ export const useReducer = (reducer, initialArg) => {
   const dispatcher = resolveDispatcher()
   return dispatcher.useReducer(reducer, initialArg)
 }
+
+export const useState = (initialState) => {
+  const dispatcher = resolveDispatcher()
+  return dispatcher.useState(initialState)
+}
