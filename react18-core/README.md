@@ -1118,11 +1118,12 @@ export function renderWithHooks(current, workInProgress, Component, props) {
     > - 判断 finishedWork.subtreeFlags 或者 finishedWork.flags 是否有副作用标识：Passive
     > - 有副作用标识，判断 rootDoesHavePassiveEffect 是否为 false，这个常量一开始就是 false，判断成立
     > - 将 rootDoesHavePassiveEffect 置为 true，使用 scheduleCallback 异步调度 flushPassiveEffect 执行副作用
-    >   - 异步调用，flushPassiveEffect 会延迟执行
-    >   - 会在 commitMutationEffectsOnFiber 之后执行（commitMutationEffectsOnFiber 中做真实 DOM 的挂载）
-    >   - 因为 useEffect 机制：异步，不阻塞渲染，在浏览器绘制后执行
+    >   - **异步调用，flushPassiveEffect 会延迟执行**
+    >   - **会在 commitMutationEffectsOnFiber 之后执行（commitMutationEffectsOnFiber 中做真实 DOM 的挂载）**
+    >   - **因为 useEffect 机制：异步，不阻塞渲染，在浏览器绘制后执行**
     > - 然后来到下面，执行 commitMutationEffectsOnFiber 进行 DOM 挂载，然后判断 rootDoesHavePassiveEffect 是否为 true，上面已经置为了 true，判断成立
     > - 将 rootDoesHavePassiveEffect 置为 false，将 rootWithPendingPassiveEffects 设置为 FiberRoot
+    > - 最后，回头执行异步任务 flushPassiveEffect，这就实现了 useEffect 的机制
 
 - flushPassiveEffect 函数中，分别调用 commitPassiveUnmountEffects 执行销毁函数、调用 commitPassiveMountEffects 执行副作用函数。
 

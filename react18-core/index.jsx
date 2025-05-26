@@ -171,12 +171,16 @@ function FuncComponent() {
 
   useEffect(() => {
     console.log('useEffect2')
+
+    return () => {
+      console.log('useEffect2 destroy')
+    }
   }, [num])
 
   return (
     <div>
-        <div>useEffect</div>
-        <h1>{num}</h1>
+        <h1>-------------- useEffect --------------</h1>
+        <h3>{num}</h3>
         <button onClick={() => setNum(num + 1)}>改变</button>
     </div>
   )
