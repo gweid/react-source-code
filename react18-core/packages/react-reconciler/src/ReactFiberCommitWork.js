@@ -466,7 +466,7 @@ const recursivelyTraverseLayoutEffects = (root, parentFiber) => {
 
     while (child !== null) {
       const current = child.alternate;
-      (commitLayoutEffectOnFiberroot, current, child)
+      commitLayoutEffectOnFiber(root, current, child)
       child = child.sibling
     }
   }
