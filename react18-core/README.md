@@ -1219,7 +1219,68 @@ function updateLayoutEffect(create, deps) {
 
 useLayoutEffect 与 useEffect主要区别在 useLayoutEffect 的执行时机：
 
+在 commitWork 阶段的入口函数 commitRoot 中：
 
+```js
+const commitRoot = (root) => {
+  const { finishedWork } = root
+
+  // 处理 useEffect | useLayoutEffect 的副作用
+  if (
+    (finishedWork.subtreeFlags & Passive) !== NoFlags ||
+    (finishedWork.flags & Passive) !== NoFlags
+  ) {
+    if (!rootDoesHavePassiveEffect) {
+      rootDoesHavePassiveEffect = true
+      // 异步调用，所以 flushPassiveEffect 会延迟执行
+      // 会在 commitMutationEffectsOnFiber 之后执行（commitMutationEffectsOnFiber 中做真实 DOM 的挂载）
+      // 因为 useEffect 机制：异步，在浏览器绘制后执行
+      scheduleCallback(flushPassiveEffect)
+    }
+  }
+
+  const subtreeHasEffects = (finishedWork.subtreeFlags & MutationMask) !== NoFlags
+  const rootHasEffects = (finishedWork.flags & MutationMask)!== NoFlags
+
+  if (subtreeHasEffects || rootHasEffects) {
+    // 执行 DOM 的挂载
+    commitMutationEffectsOnFiber(finishedWork, root)
+
+    // 执行 useLayoutEffect 的副作用
+    commitLayoutEffects(finishedWork, root)
+
+    // 这里会比 flushPassiveEffect 先执行，所以 flushPassiveEffect 中 rootWithPendingPassiveEffects 是 root
+    // 当 DOM 挂载完成后，会执行 flushPassiveEffect
+    if (rootDoesHavePassiveEffect) {
+      rootDoesHavePassiveEffect = false
+      rootWithPendingPassiveEffects = root
+    }
+  }
+
+  root.current = finishedWork
+}
+```
+
+- 可以看到，在执行完 commitMutationEffectsOnFiber 进行挂载之后，会同步执行 commitLayoutEffects，这个就是执行 useLayoutEffect 的副作用
+
+
+
+commitLayoutEffects 里面逻辑基本跟 useEffect 一致，在 commitHookLayoutEffects 中，会同时处理卸载函数和副作用函数
+
+```js
+/**
+ * 执行 useLayoutEffect 副作用函数
+ * @param {*} finishedWork 函数组件的 Fiber 节点
+ * @param {*} hookFlags hook 副作用标识
+ */
+const commitHookLayoutEffects = (finishedWork, hookFlags) => {
+  // 执行销毁函数
+  commitHookEffectListUnmount(hookFlags, finishedWork)
+
+  // 执行副作用函数
+  commitHookEffectListMount(hookFlags, finishedWork)
+}
+```
 
 
 

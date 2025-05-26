@@ -158,7 +158,7 @@
 
 
 // ----------------------- useEffect -----------------------
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 
 function FuncComponent() {
@@ -174,6 +174,14 @@ function FuncComponent() {
 
     return () => {
       console.log('useEffect2 destroy')
+    }
+  }, [num])
+
+  useLayoutEffect(() => {
+    console.log('useLayoutEffect')
+
+    return () => {
+      console.log('useLayoutEffect destroy')
     }
   }, [num])
 

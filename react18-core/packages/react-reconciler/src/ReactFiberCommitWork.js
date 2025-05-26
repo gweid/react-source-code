@@ -1,7 +1,11 @@
 import { FunctionComponent, HostRoot, HostComponent, HostText } from './ReactWorkTags'
 import { MutationMask } from './ReactFiberFlags'
-import { Placement, Update, Passive } from './ReactFiberFlags'
-import { HasEffect as HookHasEffect, Passive as HookPassive } from './ReactHookEffectTags'
+import { Placement, Update, Passive, LayoutMask } from './ReactFiberFlags'
+import {
+  HasEffect as HookHasEffect,
+  Passive as HookPassive,
+  Layout as HookLayout
+} from './ReactHookEffectTags'
 import { appendChild, insertBefore, commitUpdate } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
 
 /**
@@ -236,7 +240,7 @@ const insertOrAppendPlacementNode = (node, before, parent) => {
 }
 
 /**
- * 执行 useEffect | useLayoutEffect 销毁函数
+ * 执行 useEffect 销毁函数
  * @param {*} finishedWork RootFiber
  */
 export const commitPassiveUnmountEffects = (finishedWork) => {
@@ -244,7 +248,7 @@ export const commitPassiveUnmountEffects = (finishedWork) => {
 }
 
 /**
- * 执行 useEffect | useLayoutEffect 副作用函数
+ * 执行 useEffect 副作用函数
  * @param {*} root FiberRoot
  * @param {*} finishedWork RootFiber
  */
@@ -253,13 +257,13 @@ export const commitPassiveMountEffects = (root, finishedWork) => {
 }
 
 /**
- * 执行 useEffect | useLayoutEffect 销毁函数
+ * 执行 useEffect 销毁函数
  * @param {*} finishedWork RootFiber
  */
 const commitPassiveUnmountOnFiber = (finishedWork) => {
   const flags = finishedWork.flags
 
-  // 只有函数组件才需要处理 useEffect | useLayoutEffect 销毁函数
+  // 只有函数组件才需要处理 useEffect 销毁函数
   switch (finishedWork.tag) {
     case HostRoot:
       recursivelyTraversePassiveUnmountEffects(finishedWork)
@@ -289,7 +293,7 @@ const recursivelyTraversePassiveUnmountEffects = (parentFiber) => {
 }
 
 /**
- * 执行 useEffect | useLayoutEffect 销毁函数
+ * 执行 useEffect 销毁函数
  *  这里的 finishedWork 函数组件的 Fiber 节点
  *  因为上面是在 case FunctionComponent 分支调用的 commitHookPassiveUnmountEffects
  * @param {*} finishedWork 函数组件的 Fiber 节点
@@ -344,7 +348,7 @@ const commitHookEffectListUnmount = (flags, finishedWork) => {
 }
 
 /**
- * 执行 useEffect | useLayoutEffect 副作用函数
+ * 执行 useEffect 副作用函数
  * @param {*} root FiberRoot
  * @param {*} finishedWork RootFiber
  */
@@ -378,7 +382,7 @@ const recursivelyTraversePassiveMountEffects = (root, parentFiber) => {
 }
 
 /**
- * 执行 useEffect | useLayoutEffect 副作用函数
+ * 执行 useEffect 副作用函数
  * @param {*} finishedWork 函数组件的 Fiber 节点
  * @param {*} hookFlags hook 副作用标识
  */
@@ -419,4 +423,64 @@ const commitHookEffectListMount = (flags, finishedWork) => {
       effect = effect.next
     } while (effect !== firstEffect)
   }
+}
+
+/**
+ * 执行 useLayoutEffect 副作用函数
+ * @param {*} finishedWork RootFiber
+ * @param {*} root FiberRoot
+ */
+export const commitLayoutEffects = (finishedWork, root) => {
+  // 这拿到的是老 Fiber
+  const current = finishedWork.alternate
+  commitLayoutEffectOnFiber(root, current, finishedWork)
+}
+
+/**
+ * 执行 useLayoutEffect 副作用函数
+ * @param {*} finishedRoot FiberRoot
+ * @param {*} current 老 Fiber
+ * @param {*} finishedWork 新 Fiber
+ */
+const commitLayoutEffectOnFiber = (finishedRoot, current, finishedWork) => {
+  const flags = finishedWork.flags
+
+  switch (finishedWork.tag) {
+    case HostRoot:
+      recursivelyTraverseLayoutEffects(finishedRoot, finishedWork)
+      break
+    case FunctionComponent:
+      recursivelyTraverseLayoutEffects(finishedRoot, finishedWork)
+
+      if (flags & LayoutMask) {
+        commitHookLayoutEffects(finishedWork, HookHasEffect | HookLayout)
+      }
+      break
+  }
+}
+
+// 递归遍历所有子节点，执行 useLayoutEffect 副作用函数
+const recursivelyTraverseLayoutEffects = (root, parentFiber) => {
+  if (parentFiber.subtreeFlags & LayoutMask) {
+    let child = parentFiber.child
+
+    while (child !== null) {
+      const current = child.alternate;
+      (commitLayoutEffectOnFiberroot, current, child)
+      child = child.sibling
+    }
+  }
+}
+
+/**
+ * 执行 useLayoutEffect 副作用函数
+ * @param {*} finishedWork 函数组件的 Fiber 节点
+ * @param {*} hookFlags hook 副作用标识
+ */
+const commitHookLayoutEffects = (finishedWork, hookFlags) => {
+  // 执行销毁函数
+  commitHookEffectListUnmount(hookFlags, finishedWork)
+
+  // 执行副作用函数
+  commitHookEffectListMount(hookFlags, finishedWork)
 }

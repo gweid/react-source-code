@@ -6,7 +6,8 @@ import { MutationMask, NoFlags, Passive } from './ReactFiberFlags'
 import {
   commitMutationEffectsOnFiber,
   commitPassiveUnmountEffects,
-  commitPassiveMountEffects
+  commitPassiveMountEffects,
+  commitLayoutEffects
 } from './ReactFiberCommitWork'
 import { finishQueueingConcurrentUpdates } from './ReactFiberConcurrentUpdates'
 
@@ -173,6 +174,9 @@ const commitRoot = (root) => {
   if (subtreeHasEffects || rootHasEffects) {
     // 执行 DOM 的挂载
     commitMutationEffectsOnFiber(finishedWork, root)
+
+    // 执行 useLayoutEffect 的副作用
+    commitLayoutEffects(finishedWork, root)
 
     // 这里会比 flushPassiveEffect 先执行，所以 flushPassiveEffect 中 rootWithPendingPassiveEffects 是 root
     // 当 DOM 挂载完成后，会执行 flushPassiveEffect
