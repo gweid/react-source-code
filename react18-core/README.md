@@ -2,6 +2,12 @@
 
 
 
+## 参考资料
+
+- https://github.com/yangyitao100/yangyitao.com/blob/main/docs/react18
+
+
+
 ## 目录结构
 
 ```
@@ -23,6 +29,8 @@ react18-core/
 
 ## Fiber 架构的设计理念
 
+
+
 ### Fiber
 
 Fiber 架构之前，react 基于堆栈的递归调和算法（dom diff），这种算法在进行虚拟 DOM 比较的时候，可能会阻塞页面主线程，导致页面渲染以及用户体验差。为了解决这个问题，引入了 Fiber 架构。
@@ -33,21 +41,7 @@ Fiber 通过任务分片、优先级调度和可中断渲染，使 React 能够�
 
 
 
-Fiber 是一种数据结构：
-
-- FiberRoot 是整个应用程序的根节点，也就是 #root 节点
-
-- RootFiber 是Fiber 树的根节点，比如下面，RootFiber 就是最外层的 div 标签
-
-  ```jsx
-  const element = (
-    <div key='divKey'>
-      <h1>Hello, world!</h1>
-    </div>
-  )
-  
-  root.render(element)
-  ```
+**Fiber 是一种数据结构，结构如下：**
 
 ![](../imgs/img4.png)
 
@@ -72,6 +66,40 @@ Fiber 是一种数据结构：
   this.index = 0                     // 表示同级节点中节点的位置索引
 }
 ```
+
+
+
+**FiberRoot 和 RootFiber：**
+
+![](../imgs/img25.png)
+
+FiberRoot：
+
+- FiberRoot 是整个 React 应用的根对象
+- 管理全局状态和更新
+- 与挂载点（如 #root）关联，但不是挂载点本身，在 FiberRoot 中作为 containerInfo 被引用
+- 通过 current 属性指向当前 Fiber 树的 RootFiber
+
+
+
+RootFiber：
+
+- Fiber 树的第一个节点
+- 连接 FiberRoot 和实际组件树
+- 通过 stateNode 属性指回 FiberRoot
+- 通过 child 属性指向应用的第一个组件
+
+
+
+两者区别：
+
+|     **特性**      |             **FiberRoot**             |          **RootFiber**           |
+| :---------------: | :-----------------------------------: | :------------------------------: |
+|     **职责**      |        管理应用全局状态和调度         |     管理组件树结构和渲染流程     |
+|   **生命周期**    |        应用生命周期内唯一存在         |     可能被替换（双缓存切换）     |
+| **与 DOM 的关系** |  直接关联 DOM 容器（如 `div#root`）   |  不直接关联 DOM，是组件树的抽象  |
+|   **创建时机**    | `ReactDOM.createRoot()` 或 `render()` |       首次渲染或更新时创建       |
+|   **关键引用**    |    `current` 指向当前 `RootFiber`     | `stateNode` 反向引用 `FiberRoot` |
 
 
 
@@ -562,14 +590,24 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
 ![](../imgs/img22.png)
 
 - renderWithHooks 入口中，会给 ReactCurrentDispatcher.current 赋值为 HooksDispatcherOnMount（因为 hook 要能拿到函数组件状态，所以需要在这里）
+
 - HooksDispatcherOnMount 中定义了 useReducer 函数为 mountReducer
+
 - mountReducer 中：
   - 通过 mountWorkInProgressHook 创建 hook 对象（包含 memoizedState 状态值、queue 更新队列、next指针等），给 memoizedState 赋值初始值，并通过 next 形成 hook 链表（next 指向下一个 hook），返回这个 hook 链表
+  
+    > 初始化多个 hook，那么 hook 链表如下：
+    >
+    >   hook1 --next--> hook2 --next-->hook3 --next--> hook1
+  
   - 给 hook 链表添加更新队列 queue，queue 参数：
     - pending： 指向最新的 update 对象
     - dispatch：调度器
+    
   - 通过 dispatchReducerAction.bind 初始一个 dispatch 函数。当执行这个函数时，**内部会调用 scheduleUpdateOnFiber 会执行调度更新**
+  
   - 将 dispatch 函数保存到 hook.queue.dispatch 中，方便后面更新阶段使用
+  
   - 最后返回初始值，和 dispatch 函数：[初始值, dispatch]
 
 
@@ -620,9 +658,9 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
 
   - 会形成单向链表
 
-    > update2.next = update1.next; // update2.next → update1
-    > update1.next = update2;      // update1.next → update2
-    > queue.pending = update2;    // 头指针指向最新 update
+    > update 链表如下：
+    > 
+    >   update1 --next--> update2 --next-->update3 --next--> update1
     >
     > 
     >
@@ -639,17 +677,27 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
     - 首先，这次执行 renderWithHooks 会判断是更新阶段，那么会 `ReactCurrentDispatcher.current = HooksDispatcherOnUpdate`，使用更新阶段的函数 HooksDispatcherOnUpdate
     - 然后执行 Component(props) 重新执行函数组件
   - renderWithHooks 中重新执行了函数组件，此时又会执行到 useReducer hook 了，但是这次 useReducer 不再是初始化阶段的 mountReducer，而是更新阶段的 updateReducer，因为上面已经将 `ReactCurrentDispatcher.current` 重新赋值
+  
 - 执行 updateReducer：
   - 首先，调用 updateWorkInProgressHook 生成新 Hook 对象
     - 先拿到旧 Hook 对象
+    
     - 创建新 Hook 对象，将旧 Hook 对象的 memoizedState 和 queue 赋值给新 Hook
-    - 通过 next 将所有的 hook 进行关联，hook1 --> hook2 --> hook3，建立链表（多个 hook 执行，useReducer1、useReducer2）
+    
+    - 通过 next 将所有的 hook 进行关联，建立链表（多个 hook 执行，useReducer1、useReducer2）
+    
+      > 初始化多个 hook，那么 hook 链表如下：
+      >
+      >   hook1 --next--> hook2 --next-->hook3 --next--> hook1
+    
     - 此时新的 hook 的 memoizedState 仍然还是旧 hook 的 memoizedState 值
+    
   - 拿到新 Hook 对象后，对新 Hook 对象进行加工
     - 通过 queue.pending 拿到 update 队列，通过 update 拿到 action 更新动作（关系在 finishQueueingConcurrentUpdates 中建立）
     - 调用传入的 reducer 函数，传参是原来值和更新动作 action，得到新的 state 值
     - 从 hook.queue 中拿到在初始化阶段存入的 dispatch 函数
     - 最后返回新值 newState 和 dispatch 函数
+  
 - 至此，useReducer 在 beginWork 阶段完，接着进入 completeWork 阶段继续处理
 
 
@@ -689,7 +737,7 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
 
 #### useReducer 流程
 
-根据上面的挂载和更新阶段，归纳的流程：
+根据上面的挂载和更新阶段，归纳的流程（不包含 beginWork、completeWork、commitWork 相关的操作）：
 
 ![](../imgs/img24.png)
 
@@ -701,13 +749,24 @@ useState 基本是基于 useReducer 的，实现上有一点差异
 
 
 
+#### useState 基本使用
+
+|       **场景**       |           **用法**           |                       **说明**                       |
+| :------------------: | :--------------------------: | :--------------------------------------------------: |
+|    **初始化状态**    |   `useState(initialValue)`   |                       初始化值                       |
+| **初始化（函数式）** |   `useState(() => state)`    |   惰性初始化，仅仅首次渲染执行，避免每次渲染都计算   |
+|     **直接更新**     |     `setState(newValue)`     |                      简单值更新                      |
+|    **函数式更新**    | `setState(prev => newValue)` | 基于前一个值更新，避免多次执行 setState 值被合并问题 |
+
+
+
 #### useState 挂载
 
 
 
 **useState 初始定义：**
 
-基本跟 useReducer 一致
+与 useReducer 基本一致
 
 ```js
 // packages/react/src/ReactHooks.js
@@ -793,6 +852,10 @@ useState 的更新基本就是复用的 useReducer，只是在更新之前的调
   }
   ```
 
+  - 可以看到，直接使用了 updateReducer，传入 baseStateReducer 函数当 reducer
+
+
+
 - dispatchSetState 函数的定义
 
   ```js
@@ -822,7 +885,28 @@ useState 的更新基本就是复用的 useReducer，只是在更新之前的调
   }
   ```
 
-  - 可以看到，会在调度更新前做优化，判断值是否相同，是就不执行调度更新
+  - 可以看到，会在调度更新前做优化，判断值是否相同，相同就不执行调度更新
+
+  
+
+- 要实现调度更新前做优化，需要加多一个，在 updateReducer 中，添加一行：
+
+  ```js
+  function updateReducer(reducer) {
+    const hook = updateWorkInProgressHook()
+    const queue = hook.queue
+    // ...
+  
+    // 将新值存储到 queue.lastRenderedState，便于在下次更新前，做比对
+    queue.lastRenderedState = newState
+  }
+  ```
+
+
+
+#### useState 流程
+
+与 useReducer 完全一致
 
 
 
@@ -830,9 +914,309 @@ useState 的更新基本就是复用的 useReducer，只是在更新之前的调
 
 
 
+#### useEffect 使用
+
+
+
+**基本使用：**
+
+```jsx
+useEffect(() => {
+  // 副作用逻辑
+
+  return () => {
+    // 组件卸载前执行
+  }
+}, [deps]) // 依赖项数组
+```
+
+- **第一个参数（函数）**：定义副作用逻辑。
+- **第二个参数（依赖项数组 `deps`）**：控制副作用何时重新执行。
+- **返回值（清理函数）**：在组件卸载或依赖项变化前执行清理。
+
+
+
+**执行时机：**
+
+|         **场景**         |     **副作用函数是否执行**     |   **清理函数执行时机**   |
+| :----------------------: | :----------------------------: | :----------------------: |
+|  **首次渲染（Mount）**   |             ✅ 执行             |           ❌ 无           |
+| **依赖项变化（Update）** | ✅ 执行（先清理，再执行副作用） | ✅ 先执行上一次的清理函数 |
+|   **卸载（Unmount）**    |            ❌ 不执行            |     ✅ 执行（仅一次）     |
+|   **无依赖项（`[]`）**   |        ✅ 仅首次渲染执行        |    ✅ 仅卸载时执行清理    |
+|     **无第二个参数**     |       ✅ 每次渲染后都执行       |  ✅ 每次重新执行前先清理  |
+
+
+
+#### useEffect 挂载
+
+
+
+**useEffect 初始定义**
+
+useEffect 初始定义 与上面 useState 等 hook 差不多，不再赘述
+
+
+
+**useEffect 挂载**
+
+- HooksDispatcherOnMount 中定义 useEffect，指向 mountEffect，mountEffect 调用 mountEffectImpl 进行挂载
+
+- mountEffectImpl 中：
+
+  - 通过 mountWorkInProgressHook 创建 hook 对象，与上面 useReducer 一致，不再赘述
+
+  - `currentlyRenderingFiber.flags |= fiberFlags`：给当前 Fiber.flags 打上 副作用 标识，便于 commitWork 阶段使用
+
+  - 通过 pushEffect 创建一个副作用对象 effect，挂载到  hook.memoizedState 上
+
+  - pushEffect 中逻辑：
+
+    - 创建 effect 副作用对象
+
+    - 将这个**副作用对象 effect 挂载在当前函数 Fiber 的 updateQueue 上**
+
+    - **使用 next 关联所有 effect 对象，形成 effect 链表，挂载在 Fiber.updateQueue 上**
+
+      > effect1 --next--> effect2 --next--> effect3 --next--> effect1
+
+    - 最后返回当前 effect
+
+
+
+#### useEffect 更新
+
+useEffect 更新主要在 commitWork 阶段
+
+
+
+**调度阶段**
+
+首先，当触发 setState 之类的，会调用 scheduleUpdateOnFiber 调度更新，进入 beginWork 阶段，判断是函数组件，重新执行 renderWithHook 函数
+
+
+
+renderWithHook 函数中：
+
+- 重新设置 useEffect 为 updateEffect
+- 当执行 renderWithHook 的 component() 时，重新渲染组件，会重新执行 useEffect，也就是 updateEffect 函数
+
+
+
+updateEffect 调用 updateEffectImpl，updateEffectImpl 中：
+
+- 通过 updateWorkInProgressHook 创建新 hook 对象，与上面 useReducer 一致，不再赘述
+
+- 通过 currentHook.memoizedState 拿到旧 Hook 节点的 effect 对象，赋值给 prevEffect
+
+- 通过 prevEffect.destroy 拿到销毁阶段执行的函数
+
+- 进行新旧依赖数组判断
+
+  - 如果依赖没有变化，**通过 pushEffect 创建新 effect，并形成链表，挂载到当前 Fiber 的 updateQueue 上**
+
+    - 此时 pushEffect 的第一个参数是：hookFlags，标记这个 effect 不需要在 commitWork 阶段执行
+
+  - 如果依赖变化
+
+    - currentlyRenderingFiber.flags |= fiberFlags 打上标记
+
+      > 这一步是关键
+      >
+      > 如果没有标记 fiberFlags，那么在 commitWork 阶段，就不会对 Fiber 进行操作
+      >
+      > 不操作就不会执行 effect 副作用
+      >
+      > 所以上面的 如果依赖没有变化，是不会添加这一个标记的
+
+    - **通过 pushEffect 创建新 effect，并形成链表，挂载到当前 Fiber 的 updateQueue 上**
+      - 此时 pushEffect 的第一个参数是 HookHasEffect | hookFlags，标记这个 effect 要在 commitWork 阶段执行
+
+
+
+最后，每次调用 renderWithHook 时，会将当前的 Fiber 的 updateQueue 置空，确保每次都会重建 effect 链表
+
+因为 pushEffect 中的 effect 链表建立逻辑，如果更新阶段，是往链表后面追加新 effect，前面初始阶段的 effect 还被保留了
+
+```js
+export function renderWithHooks(current, workInProgress, Component, props) {
+  currentlyRenderingFiber = workInProgress
+
+
+  workInProgress.updateQueue = null
+
+
+  if (current !== null && current.memoizedState !== null) {
+    ReactCurrentDispatcher.current = HooksDispatcherOnUpdate
+  } else {
+    ReactCurrentDispatcher.current = HooksDispatcherOnMount
+  }
+
+  // ...
+}
+```
+
+
+
+所以，总结一下：
+
+- 无论是 updateEffectImpl 还是 mountEffectImpl，都是建立了 effect 副作用链表，并将这个 effect 链表挂载到了当前函数 Fiber 的 updateQueue 属性上，那么在 commitWork 阶段，就会使用 updateQueue 里面的信息
+- 应不应该用 updateQueue 里面的信息，由挂载当前函数 Fiber 的 flags 决定：`currentlyRenderingFiber.flags |= fiberFlags`
+- updateQueue 里面的哪些 effect 需要使用，由 HookHasEffect | hookFlags 控制
+
+
+
+**commitWork 阶段**
+
+- 首先是 commitWork 的入口函数 commitRoot 里面：
+
+  - 判断当前 Fiber 的 subtreeFlags 或者 flags 有 Passive 标记，说明当前 Fiber 需要处理副作用 effect
+
+  - 下面是一个比较巧妙的设计
+
+    > ```js
+    > let rootDoesHavePassiveEffect = false // 当前渲染的 Fiber 树（Root）是否存在需要执行的 Passive Effects
+    > let rootWithPendingPassiveEffects = null // 当前存在待执行 Passive Effects 的 Fiber Root 节点
+    > 
+    > const commitRoot = (root) => {
+    >   const { finishedWork } = root
+    > 
+    >   // 处理 useEffect | useLayoutEffect 的副作用
+    >   if (
+    >     (finishedWork.subtreeFlags & Passive) !== NoFlags ||
+    >     (finishedWork.flags & Passive) !== NoFlags
+    >   ) {
+    >     if (!rootDoesHavePassiveEffect) {
+    >       rootDoesHavePassiveEffect = true
+    >       // 异步调用，所以 flushPassiveEffect 会延迟执行
+    >       // 会在 commitMutationEffectsOnFiber 之后执行（commitMutationEffectsOnFiber 中做真实 DOM 的挂载）
+    >       // 因为 useEffect 机制：异步，在浏览器绘制后执行
+    >       scheduleCallback(flushPassiveEffect)
+    >     }
+    >   }
+    > 
+    >   const subtreeHasEffects = (finishedWork.subtreeFlags & MutationMask) !== NoFlags
+    >   const rootHasEffects = (finishedWork.flags & MutationMask)!== NoFlags
+    > 
+    >   if (subtreeHasEffects || rootHasEffects) {
+    >     // 执行 DOM 的挂载
+    >     commitMutationEffectsOnFiber(finishedWork, root)
+    > 
+    >     // 这里会比 flushPassiveEffect 先执行，所以 flushPassiveEffect 中 rootWithPendingPassiveEffects 是 root
+    >     // 当 DOM 挂载完成后，会执行 flushPassiveEffect
+    >     if (rootDoesHavePassiveEffect) {
+    >       rootDoesHavePassiveEffect = false
+    >       rootWithPendingPassiveEffects = root
+    >     }
+    >   }
+    > 
+    >   root.current = finishedWork
+    > }
+    > ```
+    >
+    > - 首先定义两个常量：rootDoesHavePassiveEffect 和 rootWithPendingPassiveEffects
+    > - 判断 finishedWork.subtreeFlags 或者 finishedWork.flags 是否有副作用标识：Passive
+    > - 有副作用标识，判断 rootDoesHavePassiveEffect 是否为 false，这个常量一开始就是 false，判断成立
+    > - 将 rootDoesHavePassiveEffect 置为 true，使用 scheduleCallback 异步调度 flushPassiveEffect 执行副作用
+    >   - 异步调用，flushPassiveEffect 会延迟执行
+    >   - 会在 commitMutationEffectsOnFiber 之后执行（commitMutationEffectsOnFiber 中做真实 DOM 的挂载）
+    >   - 因为 useEffect 机制：异步，不阻塞渲染，在浏览器绘制后执行
+    > - 然后来到下面，执行 commitMutationEffectsOnFiber 进行 DOM 挂载，然后判断 rootDoesHavePassiveEffect 是否为 true，上面已经置为了 true，判断成立
+    > - 将 rootDoesHavePassiveEffect 置为 false，将 rootWithPendingPassiveEffects 设置为 FiberRoot
+
+- flushPassiveEffect 函数中，分别调用 commitPassiveUnmountEffects 执行销毁函数、调用 commitPassiveMountEffects 执行副作用函数。
+
+  > 清理在前，创建在后，确保在创建新的副作用之前，先清理旧的副作用
+  >
+  > 初始化渲染是没有 destroy 函数的，也就是说，commitPassiveUnmountEffects 执行的这个 destroy 是上一个副作用的
+  >
+  > 所以初始化阶段，commitPassiveUnmountEffects 中会判断有没有 destroy 函数，没有就不执行
+  >
+  > 更新阶段，如果有定义 destroy，会先执行 destroy 在执行副作用 effect 函数
+
+  - **执行销毁函数**：commitPassiveUnmountEffects 中调用 commitPassiveUnmountOnFiber
+    - commitPassiveUnmountOnFiber 中判断 finishedWork.tag，只有是函数组件才有 useEffect 副作用，不是函数组件，调用 recursivelyTraversePassiveUnmountEffects 进入递归
+    - 函数组件，并且当前 Fiber.flags  标记上Passive， 调用 commitHookPassiveUnmountEffects 处理副作用，这个调用 commitHookEffectListUnmount，这里面才是真正处理副作用的
+    - commitHookEffectListUnmount 中从 Fiber.updateQueue 中拿到 effect 链表，遍历逐一处理，判断 `(effect.tag & flags) === flags`，如果是需要处理的副作用，并且有销毁函数 destroy，执行销毁函数 destroy
+  - **执行副作用函数**：commitPassiveMountEffects 中调用 commitPassiveMountOnFiber
+    - commitPassiveMountOnFiber  中判断 finishedWork.tag，只有是函数组件才有 useEffect 副作用，不是函数组件，调用 recursivelyTraversePassiveUnmountEffects 进入递归
+    - 函数组件，并且当前 Fiber.flags  标记上Passive，调用 commitHookPassiveUnmountEffects 处理副作用，这个调用 commitHookEffectListMount，这里面才是真正处理副作用的
+    - commitHookEffectListMount 中从 Fiber.updateQueue 中拿到 effect 链表，遍历逐一处理，判断 `(effect.tag & flags) === flags`，如果是需要处理的副作用，执行副作用函数： effect.create，拿到销毁函数 destroy，保存到 effect，等待下一次执行 destroy
+
+
+
+flushPassiveEffect 中非两个函数，之所以调用链路这么长，因为这里面很多逻辑，是 useEffect 和 useLayoutEffect 公用的，公用的逻辑抽离，那么只需要入口函数改变即可。
+
 
 
 ### 实现 useLayoutEffect
+
+useLayoutEffect 与的实现基本一致，区别在执行时机上以及同步异步上
+
+
+
+####useLayoutEffect 使用
+
+使用上与 useEffect 基本一致，区别是执行时机与同步异步：
+
+|     **特性**     |           **`useEffect`**           |            **`useLayoutEffect`**            |
+| :--------------: | :---------------------------------: | :-----------------------------------------: |
+|   **执行时机**   |   **异步**（在浏览器绘制后执行）    | **同步**（在 DOM 更新后，浏览器绘制前执行） |
+|   **触发阶段**   | Commit 阶段之后（浏览器渲染完成后） |    Commit 阶段之中（DOM 更新后，渲染前）    |
+| **对渲染的影响** |          不阻塞浏览器渲染           |      会阻塞浏览器渲染（可能导致延迟）       |
+|   **适用场景**   |   数据获取、订阅、非关键 UI 更新    |     DOM 测量、同步 UI 调整（避免闪烁）      |
+
+
+
+#### useLayoutEffect 挂载
+
+
+
+**useLayoutEffect 初始定义**
+
+useLayoutEffect 初始定义 与上面 useState 等 hook 差不多，不再赘述
+
+
+
+**useLayoutEffect 挂载**
+
+mountLayoutEffect 实现与 mountEffect 基本一致，都是调用 mountEffectImpl，只是传参不同
+
+```js
+const HooksDispatcherOnMount = {
+  useLayoutEffect: mountLayoutEffect
+}
+
+function mountLayoutEffect(create, deps) {
+  return mountEffectImpl(UpdateEffect, HookLayout, create, deps);
+}
+```
+
+- 调用 mountEffectImpl 的前两个参数与 mountEffect 不同
+
+
+
+#### useLayoutEffect 更新
+
+updateLayoutEffect 实现与 updateEffect 基本一致，都是调用 updateEffectImpl，只是传参不同
+
+```js
+const HooksDispatcherOnUpdate = {
+  useLayoutEffect: updateLayoutEffect
+}
+
+function updateLayoutEffect(create, deps) {
+  return updateEffectImpl(UpdateEffect, HookLayout, create, deps);
+}
+```
+
+- 调用 updateEffectImpl 的前两个参数与 updateEffect 不同
+
+
+
+**useLayoutEffect 执行时机：**
+
+useLayoutEffect 与 useEffect主要区别在 useLayoutEffect 的执行时机：
 
 
 

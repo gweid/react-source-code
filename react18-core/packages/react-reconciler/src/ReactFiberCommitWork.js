@@ -1,6 +1,7 @@
 import { FunctionComponent, HostRoot, HostComponent, HostText } from './ReactWorkTags'
 import { MutationMask } from './ReactFiberFlags'
-import { Placement, Update } from './ReactFiberFlags'
+import { Placement, Update, Passive } from './ReactFiberFlags'
+import { HasEffect as HookHasEffect, Passive as HookPassive } from './ReactHookEffectTags'
 import { appendChild, insertBefore, commitUpdate } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
 
 /**
@@ -74,12 +75,12 @@ const recursivelyTraverseMutationEffects = (root, parentFiber) => {
  * @param {*} finishedWork 最新的可展示的 Fiber 树
  */
 const commitReconciliationEffects = (finishedWork) => {
-   const { flags } = finishedWork
+  const { flags } = finishedWork
 
-   // 如果是插入操作
-   if (flags & Placement) {
-     commitPlacement(finishedWork)
-   }
+  // 如果是插入操作
+  if (flags & Placement) {
+    commitPlacement(finishedWork)
+  }
 }
 
 /**
@@ -226,10 +227,196 @@ const insertOrAppendPlacementNode = (node, before, parent) => {
 
       // 递归处理兄弟节点（所有兄弟节点都要做处理）
       let { sibling } = child
-      while (sibling!== null) {
+      while (sibling !== null) {
         insertOrAppendPlacementNode(sibling, before, parent)
         sibling = sibling.sibling
       }
     }
+  }
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 销毁函数
+ * @param {*} finishedWork RootFiber
+ */
+export const commitPassiveUnmountEffects = (finishedWork) => {
+  commitPassiveUnmountOnFiber(finishedWork)
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 副作用函数
+ * @param {*} root FiberRoot
+ * @param {*} finishedWork RootFiber
+ */
+export const commitPassiveMountEffects = (root, finishedWork) => {
+  commitPassiveMountOnFiber(root, finishedWork)
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 销毁函数
+ * @param {*} finishedWork RootFiber
+ */
+const commitPassiveUnmountOnFiber = (finishedWork) => {
+  const flags = finishedWork.flags
+
+  // 只有函数组件才需要处理 useEffect | useLayoutEffect 销毁函数
+  switch (finishedWork.tag) {
+    case HostRoot:
+      recursivelyTraversePassiveUnmountEffects(finishedWork)
+      break
+    case FunctionComponent:
+      // 递归处理所有子节点
+      recursivelyTraversePassiveUnmountEffects(finishedWork)
+
+      // 如果当前函数 Fiber 的 flags 被标记有副作用
+      if (flags & Passive) {
+        commitHookPassiveUnmountEffects(finishedWork, HookHasEffect | HookPassive)
+      }
+      break
+  }
+}
+
+// 循环遍历所有子节点，递归调用 commitPassiveUnmountOnFiber
+const recursivelyTraversePassiveUnmountEffects = (parentFiber) => {
+  if (parentFiber.subtreeFlags & Passive) {
+    let child = parentFiber.child
+
+    while (child !== null) {
+      commitPassiveUnmountOnFiber(child)
+      child = child.sibling
+    }
+  }
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 销毁函数
+ *  这里的 finishedWork 函数组件的 Fiber 节点
+ *  因为上面是在 case FunctionComponent 分支调用的 commitHookPassiveUnmountEffects
+ * @param {*} finishedWork 函数组件的 Fiber 节点
+ * @param {*} hookFlags hook 副作用标识
+ */
+const commitHookPassiveUnmountEffects = (finishedWork, hookFlags) => {
+  commitHookEffectListUnmount(hookFlags, finishedWork)
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 销毁函数
+ *  这里的 finishedWork 函数组件的 Fiber 节点
+ *  因为上面是在 case FunctionComponent 分支调用的 commitHookPassiveUnmountEffects
+ * @param {*} flags hook 副作用标识
+ * @param {*} finishedWork 函数组件的 Fiber 节点
+ */
+const commitHookEffectListUnmount = (flags, finishedWork) => {
+  // 拿到副作用 effect 链表
+  const updateQueue = finishedWork.updateQueue
+
+  // 拿到最新的副作用
+  const lastEffect = updateQueue.lastEffect !== null ? updateQueue.lastEffect : null
+
+  if (lastEffect !== null) {
+    // 链表结构：effect1 --next--> effect2 --next--> effect3 --next--> effect1
+    // lastEffect 永远指向最新的 effect，所以这里的 lastEffect.next 就是第一个 effect
+    const firstEffect = lastEffect.next
+
+    let effect = firstEffect
+
+    do {
+      /**
+       * 如果当前 effect 的 tag 与 flags 匹配，说明当前 effect 需要执行销毁函数
+       * 
+       * effect 的 tag 有两种情况:
+       *  - HookPassive 这种情况是依赖数组不变，不需要重新执行销毁函数
+       *  - HookHasEffect | HookPassive 这种情况是依赖数组变化、或者依赖数组是空、或者没有依赖数组
+       */
+      if ((effect.tag & flags) === flags) {
+        const destroy = effect.destroy
+
+        // 两种情况：
+        //  1.初始化阶段是不会有 destroy
+        //  2.更新阶段是会有 destroy，判断有没有定义了 destroy
+        if (destroy !== undefined) {
+          destroy()
+        }
+      }
+      effect = effect.next
+    } while (effect !== firstEffect)
+  }
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 副作用函数
+ * @param {*} root FiberRoot
+ * @param {*} finishedWork RootFiber
+ */
+const commitPassiveMountOnFiber = (finishedRoot, finishedWork) => {
+  const flags = finishedWork.flags
+
+  switch (finishedWork.tag) {
+    case HostRoot:
+      recursivelyTraversePassiveMountEffects(finishedRoot, finishedWork)
+      break
+    case FunctionComponent:
+      recursivelyTraversePassiveMountEffects(finishedRoot, finishedWork)
+
+      // 如果当前 Fiber 的 flags 被标记有副作用
+      if (flags & Passive) {
+        commitHookPassiveMountEffects(finishedWork, HookHasEffect | HookPassive)
+      }
+      break
+  }
+}
+
+// 循环遍历所有子节点，递归调用 commitPassiveMountOnFiber
+const recursivelyTraversePassiveMountEffects = (root, parentFiber) => {
+  if (parentFiber.subtreeFlags & Passive) {
+    let child = parentFiber.child;
+    while (child !== null) {
+      commitPassiveMountOnFiber(root, child);
+      child = child.sibling;
+    }
+  }
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 副作用函数
+ * @param {*} finishedWork 函数组件的 Fiber 节点
+ * @param {*} hookFlags hook 副作用标识
+ */
+const commitHookPassiveMountEffects = (finishedWork, hookFlags) => {
+  commitHookEffectListMount(hookFlags, finishedWork)
+}
+
+/**
+ * 执行 useEffect | useLayoutEffect 副作用函数
+ * @param {*} flags hook 副作用标识
+ * @param {*} finishedWork 函数组件的 Fiber 节点
+ */
+const commitHookEffectListMount = (flags, finishedWork) => {
+  const updateQueue = finishedWork.updateQueue
+
+  const lastEffect = updateQueue.lastEffect !== null ? updateQueue.lastEffect : null
+
+  if (lastEffect !== null) {
+    // 链表结构：effect1 --next--> effect2 --next--> effect3 --next--> effect1
+    // lastEffect 永远指向最新的 effect，所以这里的 lastEffect.next 就是第一个 effect
+    const firstEffect = lastEffect.next
+
+    let effect = firstEffect
+
+    /**
+     * 如果当前 effect 的 tag 与 flags 匹配，说明当前 effect 需要执行销毁函数
+     * 
+     * effect 的 tag 有两种情况:
+     *  - HookPassive 这种情况是依赖数组不变，不需要重新执行销毁函数
+     *  - HookHasEffect | HookPassive 这种情况是依赖数组变化、或者依赖数组是空、或者没有依赖数组
+     */
+    do {
+      if ((effect.tag & flags) === flags) {
+        const create = effect.create
+        // 执行副作用函数，得到 销毁函数，保存 effect，待下次执行 副作用函数之前执行 这个销毁函数
+        effect.destroy = create()
+      }
+      effect = effect.next
+    } while (effect !== firstEffect)
   }
 }

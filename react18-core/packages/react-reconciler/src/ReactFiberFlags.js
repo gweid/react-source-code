@@ -16,4 +16,5 @@ export const NoFlags = /*          */ 0b00000000000000000000000000 // 标识位�
 export const Placement = /*        */ 0b00000000000000000000000010 // 标识位：插入
 export const Update = /*           */ 0b00000000000000000000000100 // 标识位：更新
 export const ChildDeletion = /*    */ 0b00000000000000000000010000 // 标识位：删除子节点
+export const Passive = /*          */ 0b00000000000000100000000000 // 标识位：副作用
 export const MutationMask = Placement | Update; // 插入或者更新，变更标识位掩码
