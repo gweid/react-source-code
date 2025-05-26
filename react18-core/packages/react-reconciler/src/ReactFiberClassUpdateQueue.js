@@ -81,14 +81,15 @@ export const enqueueUpdate = (fiber, update) => {
  * @param {*} workInProgress 需要计算新状态的 Fiber 节点
  */
 export const processUpdateQueue = (workInProgress) => {
+  // 在 render 函数阶段，就已经通过 enqueueUpdate 处理了更新队列 updateQueue
   // 获取当前 Fiber 节点的更新队列
   const queue = workInProgress.updateQueue
   const pendingQueue = queue.shared.pending
 
   // 如果有待处理的更新
   if (pendingQueue !== null) {
-    // enqueueUpdate 创建更新队列使用了单向循环链表
-    // pending 指向最后一个更新，pending.next 指向第一个更新
+    // render 阶段通过 enqueueUpdate 函数创建更新队列使用了单向循环链表
+    // pending 指向最后一个更新，它的 next 即 pending.next 指向指向第一个更新
 
     // 取出最后一个更新
     const lastPendingUpdate = pendingQueue
@@ -100,7 +101,7 @@ export const processUpdateQueue = (workInProgress) => {
 
     // 断开循环链表，准备处理更新
     // 为什么需要断开循环链表？
-    // 环形链表：A → B → C → A，如果直接遍历环形链表而不断开：A → B → C → A → B → C → ...（无限循环）
+    // 一开始为单向环形链表：A → B → C → A，如果直接遍历环形链表而不断开：A → B → C → A → B → C → ...（无限循环）
     // 断开循环链表：A → B → C → null，链表变为单向链表，不会无限循环
     lastPendingUpdate.next = null
 
