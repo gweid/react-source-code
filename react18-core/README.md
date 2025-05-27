@@ -735,7 +735,7 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
 
 
 
-其实到这一步，`const [num, setNum] = useReducer()` 返回的 state 值已经更新了，后面两阶段，就是将这个新值显示到页面上
+其实到这一步，`const [num, setNum] = useReducer()` 返回的 state 值已经更新了，后面两阶段，就是将这个新值显示到页面上（后面两阶段严格上已经属于组件更新的内容了，不再属于 useReducer 了）
 
 ![](../imgs/img24.png)
 
@@ -743,20 +743,20 @@ Hook 是函数组件的特性，所以 ReactCurrentDispatcher.current 的赋值�
 
 **completeWork 阶段：**
 
-按照 react 渲染流程，执行完 beginWork 阶段，就会进入 completeWork 阶段，在 completeWork 阶段涉及对 useReducer 的处理：
+按照 react 渲染流程，执行完 beginWork 阶段，就会进入 completeWork 阶段，在 completeWork 阶段涉生成函数组件的更新描述 updatePayload，并挂载在 Fiber 的 updateQueue 上，便于后面 commitWork 阶段使用：
 
-- 首先，进入原生节点分支判断，这里面判断，如果是更新阶段，调用 updateHostComponent 函数
+- 首先，进入原生节点分支判断，这里面判断，**如果是更新阶段，调用 updateHostComponent 函数**
 - updateHostComponent 函数：
   - 调用 prepareUpdate 生成更新描述
   - 将更新描述挂载到 workInProgress.updateQueue = updatePayload 上，给 commitWork 阶段使用
   - 给当前 Fiber 标记更新：workInProgress.flags |= Update，便于在 commitWork 阶段判断是更新
 - prepareUpdate 函数中会调用 diffProperties，这个是生成更新描述的主要函数
   - 遍历旧 props，查找在 nextProps 中不存在的属性，属性移除
+  - 
   - 遍历新 props，处理属性更新和添加
   - 会对特殊属性做处理，比如 style、children
     - children 如果是文本节点，会直接将这个加入到更新描述中，因为文本节点可以在 commitWork 阶段直接挂载，而不需要生成 Fiber
   - 最后得到更新描述，更新描述的格式类似：['style', {color: 'red'}, 'children', '123']，就是 [key, value, key, value, ...] 格式
-- 到此，useReducer 在 completeWork 阶段完，进入 commitWork 阶段继续处理
 
 
 
@@ -1021,6 +1021,10 @@ useEffect 初始定义 与上面 useState 等 hook 差不多，不再赘述
 
 
 
+总结下挂载阶段：生成 hook 对象并形成链表、给当前 Fiber 添加 flags 标记为 PassiveEffect、生成 effect 对象并形成链表
+
+
+
 #### useEffect 更新
 
 useEffect 更新主要在 commitWork 阶段
@@ -1099,7 +1103,7 @@ export function renderWithHooks(current, workInProgress, Component, props) {
 
 - 无论是 updateEffectImpl 还是 mountEffectImpl，都是建立了 effect 副作用链表，并将这个 effect 链表挂载到了当前函数 Fiber 的 updateQueue 属性上，那么在 commitWork 阶段，就会使用 updateQueue 里面的信息
 - 应不应该用 updateQueue 里面的信息，由挂载当前函数 Fiber 的 flags 决定：`currentlyRenderingFiber.flags |= fiberFlags`
-- updateQueue 里面的哪些 effect 需要使用，由 HookHasEffect | hookFlags 控制
+- updateQueue 里面的哪些 effect 需要使用，由 effect 对象的 tag （即 HookHasEffect | hookFlags） 控制
 
 
 
