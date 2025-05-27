@@ -96,7 +96,7 @@ function updateReducer(reducer) {
   if (pendingQueue !== null) {
     queue.pending = null
 
-    // 记录第一个 update 对象，给后面比较用，主要是为了打断循环，避免无限循环
+    // 记录第一个 update 对象，给后面判断用，主要是为了打断循环，避免无限循环
     const firstUpdate = pendingQueue.next
 
     let update = firstUpdate
@@ -431,6 +431,7 @@ const mountWorkInProgressHook = () => {
 
   // 还没初始化过 hook
   if (workInProgressHook === null) {
+    // 函数组件的 Fiber 节点的 ​​memoizedState 属性​​，用于存储 Hooks 链表
     currentlyRenderingFiber.memoizedState = workInProgressHook = hook
   } else {
     // 初始化了一个 hook 之后，workInProgressHook 就不会为 null

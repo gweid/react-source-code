@@ -66,7 +66,7 @@ const renderRootSync = (root) => {
 
 /**
  * 创建正在工作中的 Fiber 树：workInProgress（双缓存）
- * @param {*} root 
+ * @param {*} root FiberRoot
  */
 const prepareFreshStack = (root) => {
   workInProgress = createWorkInProgress(root.current, null)

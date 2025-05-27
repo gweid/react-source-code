@@ -157,7 +157,7 @@ const createChildReconciler = (shouldTrackSideEffects) => {
       if (child.key === key) {
         // 如果 type 相同
         if (child.type === element.type) {
-          // 先删除剩下的其它老 Fiber
+          // 先删除其它兄弟老 Fiber（如果有的话）
           deleteRemainingChildren(returnFiber, child.sibling)
 
           // 复用 type 相同的老 Fiber
@@ -191,7 +191,7 @@ const createChildReconciler = (shouldTrackSideEffects) => {
    * @returns 新的第一个子 Fiber
    */
   const reconcileChildrenArray = (returnFiber, currentFirstChild, newChildren) => {
-    let resultingFirstChild = null
+    let resultingFirstChild = null // 返回的第一个子 Fiber
     let previousNewFiber = null
     let newIdx = 0
     let oldFiber = currentFirstChild
@@ -203,20 +203,20 @@ const createChildReconciler = (shouldTrackSideEffects) => {
      * 更新阶段 DOM diff 逻辑
      * 第一轮，线性同序比较
      * 
-     * 共用 newIdx 的好处是，当是更新阶段，只会走更新阶段逻辑，不会再走到下面的初始化阶段
+     * 两轮比较共用 newIdx 
      */
     for (; oldFiber !== null && newIdx < newChildren.length; newIdx++) {
       nextOldFiber = oldFiber.sibling
 
       /**
-       * 同序比较线性比较
+       * 线性同序比较
        * 返回的 Fiber 有两种情况：
        *  1、key 相同，type 相同，可以复用的老 Fiber
        *  2、key 相同，type 不同，创建的新 Fiber
        */
       const newFiber = updateSlot(returnFiber, oldFiber, newChildren[newIdx])
 
-      // newFiber === null 代表 key 不相同，直接退出线性同序比较
+      // newFiber === null 代表 key 不相同或者不可复用，直接退出线性同序比较
       if (newFiber === null) {
         break
       }
@@ -249,8 +249,8 @@ const createChildReconciler = (shouldTrackSideEffects) => {
 
     /**
      * oldFiber 为空是两种情况：
-     *  1、初始化阶段
-     *  2、更新 DOM Diff 第一轮同序线性比较走完后，老 Fiber 也遍历完了
+     *  1、初始化阶段，虚拟 DOM 需要转化为 Fiber
+     *  2、更新 DOM Diff 第一轮同序线性比较走完后，老 Fiber 也遍历完了，那么剩下虚拟 DOM 都需要转化为 Fiber
      */
     if (oldFiber === null) {
       for (; newIdx < newChildren.length; newIdx++) {
@@ -273,7 +273,9 @@ const createChildReconciler = (shouldTrackSideEffects) => {
       }
     }
 
-    // 更新逻辑：老 Fiber 和新虚拟 DOM 经过第一轮同序线性比较后，都没有遍历完
+    // 更新逻辑：老 Fiber 和新虚拟 DOM 经过第一轮同序线性比较后，都没有遍历完，进入第二轮比较
+
+    // 将剩余的老 Fiber 的 key 或索引和 Fiber 对象建立对应关系
     const existingChildren = mapRemainingChildren(returnFiber, oldFiber)
 
     // 遍历剩余的新虚拟 DOM
@@ -306,7 +308,7 @@ const createChildReconciler = (shouldTrackSideEffects) => {
       }
     }
 
-    // 最后，将不可复用的老 Fiber 标记为删除
+    // 最后，将不可用的老 Fiber 标记为删除
     if (shouldTrackSideEffects) {
       existingChildren.forEach(child => deleteChild(returnFiber, child))
     }
@@ -359,7 +361,7 @@ const createChildReconciler = (shouldTrackSideEffects) => {
   const updateSlot = (returnFiber, oldFiber, newChild) => {
     const key = oldFiber !== null ? oldFiber.key : null
 
-    // 对文本节点的处理
+    // 先对文本节点的处理
     if ((typeof newChild === 'string' && newChild !== '') || typeof newChild === 'number') {
       // 文本节点没有 key，所以如果 Fiber 有 key，那么就不是文本节点，不可复用
       if (key !== null) {
@@ -372,6 +374,7 @@ const createChildReconciler = (shouldTrackSideEffects) => {
     if (newChild !== null && typeof newChild === 'object') {
       switch (newChild.$$typeof) {
         case REACT_ELEMENT_TYPE:
+          // 如果 key 相同，那么可以复用
           if (newChild.key === key) {
             return updateElement(returnFiber, oldFiber, newChild)
           }
@@ -419,8 +422,8 @@ const createChildReconciler = (shouldTrackSideEffects) => {
   const updateElement = (returnFiber, current, element) => {
     const elementType = element.type
 
-    // 如果 type 
     if (current !== null) {
+      // type 相同，直接复用
       if (current.type === elementType) {
         const existing = useFiber(current, element.props)
         existing.return = returnFiber

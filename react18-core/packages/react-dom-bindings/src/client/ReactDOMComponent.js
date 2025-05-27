@@ -19,7 +19,7 @@ export const setInitialProperties = (domElement, type, props) => {
 /**
  * 设置初始 DOM 属性
  * @param {*} tag DOM 元素的类型
- * @param {*} domElement 目标DOM 元素
+ * @param {*} domElement 目标 DOM 元素
  * @param {*} nextProps 需要设置的属性
  */
 const setInitialDOMProperties = (tag, domElement, nextProps) => {

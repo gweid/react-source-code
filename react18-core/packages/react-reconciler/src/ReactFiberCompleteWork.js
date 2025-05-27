@@ -36,6 +36,8 @@ export const completeWork = (current, workInProgress) => {
         const instance = createInstance(type, newProps, workInProgress)
   
         // 内部做循环，把所有子 DOM 追加到 父 DOM 上
+        // 这里为什么可以这样？因为按照 completeWork 流程，先处理子节点，再回溯到父节点
+        // 所以这里可以拿到所有子节点的真实 DOM 节点
         appendAllChildren(instance, workInProgress)
   
         // 将真实 DOM 关联到 stateNode 属性
@@ -130,6 +132,8 @@ const appendAllChildren = (parent, workInProgress) => {
 
   while (node) {
     if (node.tag === HostComponent || node.tag === HostText) {
+      // 这里为什么可以这样？因为按照 completeWork 流程，先处理子节点，再回溯到父节点
+      // 所以这里可以拿到所有子节点的真实 DOM 节点
       appendInitialChild(parent, node.stateNode)
     } else if (node.child !== null) {
       /**

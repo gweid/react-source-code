@@ -75,13 +75,14 @@ const recursivelyTraverseMutationEffects = (root, parentFiber) => {
 }
 
 /**
- * 
+ * 前置判断，调用 commitPlacement 真实 DOM 渲染到页面
  * @param {*} finishedWork 最新的可展示的 Fiber 树
  */
 const commitReconciliationEffects = (finishedWork) => {
   const { flags } = finishedWork
 
   // 如果是插入操作
+  // 在 compleleWork 阶段，会打上 Placement 标记：placeChild 函数和 placeSingleChild 函数中
   if (flags & Placement) {
     commitPlacement(finishedWork)
   }

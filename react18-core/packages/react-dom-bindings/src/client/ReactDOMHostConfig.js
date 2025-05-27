@@ -12,6 +12,7 @@ export const shouldSetTextContent = (type, props) => {
  * @param {*} internalInstanceHandle 就是 workInProgress 
  */
 export const createInstance = (type, props, internalInstanceHandle) => {
+  // 创建真实 DOM 节点
   const domElement = document.createElement(type)
 
   // 在真实 DOM 节点添加 Fiber

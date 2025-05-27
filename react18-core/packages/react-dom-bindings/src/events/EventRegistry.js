@@ -7,7 +7,7 @@ export const allNativeEvents = new Set()
  * 主要是分离捕获和冒泡逻辑​，捕获和冒泡阶段需要不同的处理逻辑（例如事件触发顺序、是否阻止传播）
  * 
  * @param {*} registrationName 需要注册的 react 事件名
- * @param {*} dependencies 
+ * @param {*} dependencies 原生事件名数组
  */
 export const registerTwoPhaseEvent = (registrationName, dependencies) => {
   // 注册冒泡阶段的事件
