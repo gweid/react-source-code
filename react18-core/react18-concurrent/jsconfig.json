@@ -1,0 +1,15 @@
+// 这是给 vscode 识别的，识别路径，点击函数名，跳转具体实现的文件
+{
+  "compilerOptions": {
+    "baseUrl": "packages",
+    "paths": {
+      "react/*": ["react/*"],
+      "react-dom/*": ["react-dom/*"],
+      "react-dom-bindings/*": ["react-dom-bindings/*"],
+      "react-reconciler/*": ["react-reconciler/*"],
+      "scheduler/*": ["scheduler/*"],
+      "shared/*": ["shared/*"]
+    }
+  },
+  "exclude": ["node_modules"]
+}
