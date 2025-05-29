@@ -2141,6 +2141,18 @@ const compare = (a, b) => {
 
 
 
+### react 优先级体系
+
+```text
+任务优先级 ===> 事件优先级 ===> 调度优先级
+```
+
+- 任务优先级：任务创建
+- 事件优先级：触发事件
+- 调度优先级：任务调度
+
+
+
 ## 调度系统
 
 React 的调度系统（Scheduler）是其实现 **并发模式（Concurrent Mode）** 的核心机制，负责协调任务的优先级、执行顺序和时间分配，确保高优先级任务（如用户交互）能快速响应，同时低优先级任务（如数据加载）不会阻塞主线程
@@ -2301,7 +2313,244 @@ performWorkUntilDeadline，channel.port1 中定义了监听函数 performWorkUnt
 
 ### 任务优先级与事件优先级
 
+react 18 的优先级体系：任务优先级 ===> 事件优先级 ===> 调度优先级
 
+
+
+#### 任务优先级
+
+任务优先级，即 Lane 优先级，主要就是定义了一堆 Lane 常量，还有一些计算工具函数。集中在下面文件：
+
+> react-reconciler/src/ReactFiberLane.js
+
+
+
+定义的 Lane 常量：
+
+```js
+/** 总车道数量 */
+export const TotalLanes = 31
+
+/** 无车道 */
+export const NoLanes = /*                       */ 0b0000000000000000000000000000000
+/** 无车道 */
+export const NoLane = /*                        */ 0b0000000000000000000000000000000
+
+/** 同步车道 */
+export const SyncLane = /*                      */ 0b0000000000000000000000000000001
+
+/** 输入连续水合车道 */
+export const InputContinuousHydrationLane = /*  */ 0b0000000000000000000000000000010
+/** 输入连续车道 */
+export const InputContinuousLane = /*           */ 0b0000000000000000000000000000100
+
+/** 默认水合车道 */
+export const DefaultHydrationLane = /*          */ 0b0000000000000000000000000001000
+/** 默认车道 */
+export const DefaultLane = /*                   */ 0b0000000000000000000000000010000
+
+/** 选择性水合车道 */
+export const SelectiveHydrationLane = /*        */ 0b0001000000000000000000000000000
+
+/** 空闲水合车道 */
+export const IdleHydrationLane = /*             */ 0b0010000000000000000000000000000
+/** 空闲车道 */
+export const IdleLane = /*                      */ 0b0100000000000000000000000000000
+
+/** 屏幕外车道 */
+export const OffscreenLane = /*                 */ 0b1000000000000000000000000000000
+
+/** 非空闲车道 */
+const NonIdleLanes = /*                         */ 0b0001111111111111111111111111111
+```
+
+
+
+计算：
+
+```js
+import { allowConcurrentByDefault } from 'shared/ReactFeatureFlags'
+
+
+/**
+ * 标记根节点更新
+ * @param {*} root FiberRoot 节点
+ * @param {*} updateLane 更新车道
+ */
+export const markRootUpdated = (root, updateLane) => {
+  root.pendingLanes |= updateLane
+}
+
+/**
+ * 获取下一个车道
+ * @param {*} root FiberRoot 节点
+ * @returns 下一个车道
+ */
+export const getNextLanes = (root) => {
+  const pendingLanes = root.pendingLanes
+  // 如果没有待处理的车道（相当于 FiberRoot 节点没有优先级的任务），则返回 NoLanes
+  if (pendingLanes === NoLanes) return NoLanes
+
+  const nextLanes = getHighestPriorityLanes(pendingLanes)
+
+  return nextLanes
+}
+
+/**
+ * 获取最高优先级车道
+ * @param {*} lanes 车道
+ * @returns 最高优先级车道
+ */
+export const getHighestPriorityLanes = (lanes) => {
+  return getHighestPriorityLane(lanes)
+}
+
+/**
+ * 获取最高优先级车道
+ * @param {*} lanes 车道
+ * @returns 最高优先级车道
+ */
+export const getHighestPriorityLane = (lanes) => {
+  // 获取最低有效位（最高优先级车道）
+  return lanes & -lanes
+}
+
+/**
+ * 是否包括非空闲工作
+ * @param {*} lanes 车道
+ * @returns 如果包括非空闲工作则返回 true
+ */
+export const includesNonIdleWork = (lanes) => {
+  return (lanes & NonIdleLanes) !== NoLanes
+}
+
+/**
+ * 是否是车道的子集
+ * @param {*} set 集合
+ * @param {*} subset 子集
+ * @returns 如果是子集则返回 true
+ */
+export const isSubsetOfLanes = (set, subset) => {
+  return (set & subset) === subset
+}
+
+/**
+ * 合并车道
+ * @param {*} a 车道 a
+ * @param {*} b 车道 b
+ * @returns 合并后的车道
+ */
+export const mergeLanes = (a, b) => {
+  return a | b
+}
+
+/**
+ * 是否包括阻塞车道（在并发渲染中使用）
+ * @param {*} root FiberRoot 节点
+ * @param {*} lanes 车道
+ * @returns 如果包括阻塞车道则返回 false
+ */
+export const includesBlockingLane = (root, lanes) => {
+  if (allowConcurrentByDefault) return false
+
+  const SyncDefaultLanes = InputContinuousLane | DefaultLane
+  return (lanes & SyncDefaultLanes) !== NoLanes
+}
+```
+
+
+
+#### 事件优先级
+
+事件优先级，主要定义了一些事件的优先级常量，还有一些工具函数。集中在下面文件：
+
+> react-reconciler/src/ReactEventPriorities.js
+
+
+
+事件的优先级常量：
+
+```js
+import {
+  DefaultLane,
+  IdleLane,
+  InputContinuousLane,
+  SyncLane
+} from './ReactFiberLane'
+
+/** 离散事件优先级（比如点击事件，一瞬间触发的事件），与 SyncLane 相关联，优先级最高 */
+export const DiscreteEventPriority = SyncLane
+/** 连续事件优先级（比如拖拽事件，会连续触发），与 InputContinuousLane 相关联 */
+export const ContinuousEventPriority = InputContinuousLane
+/** 默认事件优先级，与 DefaultLane 相关联 */
+export const DefaultEventPriority = DefaultLane
+/** 空闲事件优先级，与 IdleLane 相关联 */
+export const IdleEventPriority = IdleLane
+
+/** 当前更新优先级值 */
+let currentUpdatePriority = NoLane
+```
+
+
+
+工具函数：
+
+```js
+/**
+ * 获取当前更新优先级
+ * @returns 当前更新优先级
+ */
+export const getCurrentUpdatePriority = () => {
+  return currentUpdatePriority
+}
+
+/**
+ * 设置当前更新优先级
+ * @param {*} newPriority 新的优先级
+ */
+export const setCurrentUpdatePriority = (newPriority) => {
+  currentUpdatePriority = newPriority
+}
+
+/**
+ * 判断事件优先级是否高于车道
+ * @param {*} eventPriority 事件优先级
+ * @param {*} lane 车道
+ * @returns 如果事件优先级高于车道则返回 true
+ */
+export const isHigherEventPriority = (eventPriority, lane) => {
+  // 二进制值越小，优先级越高
+  return (eventPriority !== 0) && eventPriority < lane
+}
+
+/**
+ * 将车道转换为事件优先级
+ * @param {*} lanes 车道
+ * @returns 与车道相对应的事件优先级
+ */
+export const lanesToEventPriority = (lanes) => {
+  // 获取最高优先级车道
+  const lane = getHighestPriorityLane(lanes)
+
+  // DiscreteEventPriority: 0b0000000000000000000000000000001
+  //                  lane: 0b0000000000000000000000000000100
+  if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
+    return DiscreteEventPriority
+  }
+
+  if (!isHigherEventPriority(ContinuousEventPriority, lane)) {
+    return ContinuousEventPriority
+  }
+
+  // 如果包括非空闲工作，则返回默认事件优先级
+  if (includesNonIdleWork(lane)) {
+    return DefaultEventPriority
+  }
+
+  // 如果都不符合，则返回空闲事件优先级
+  return IdleEventPriority
+}
+```
 
 
 
