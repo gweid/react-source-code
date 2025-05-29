@@ -80,7 +80,9 @@ React18.3.1 的核心源码文件
 
 
 
-[实现简单版 react](./simple-mini-react/README.md)：实现原始版的 react 核心，包括：
+#### [实现简单版 react](./simple-mini-react/README.md)
+
+实现原始版的 react 核心，包括：
 
 - 初始渲染
 - 合成事件
@@ -92,7 +94,9 @@ React18.3.1 的核心源码文件
 
 
 
-[实现 react18 核心代码](./react18-core/README.md)：实现 react 18 版本核心代码，包括：
+#### [实现 react18 核心代码](./react18-core/README.md)
+
+实现 react 18 版本核心代码，包括：
 
 - 初始渲染
   - jsxDEV
