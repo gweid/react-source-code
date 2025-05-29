@@ -113,6 +113,7 @@
 
 //   return (
 //     // <div>
+//     //   <h2>-------------- useReducer --------------</h2>
 //     //   <button onClick={handleAdd}>num++：{num}</button>
 //     // </div>
 
@@ -142,6 +143,7 @@
 
 //   return (
 //     // <div>
+//     //   <h2>-------------- useState --------------</h2>
 //     //   <button onClick={handleAdd}>num++：{num}</button>
 //     // </div>
 
@@ -157,38 +159,58 @@
 // root.render(<FuncComponent />)
 
 
-// ----------------------- useEffect -----------------------
-import { useState, useEffect, useLayoutEffect } from 'react'
+// ----------------------- useEffect 和 useLayoutEffect -----------------------
+// import { useState, useEffect, useLayoutEffect } from 'react'
+// import { createRoot } from 'react-dom/client'
+
+// function FuncComponent() {
+
+//   const [num, setNum] = useState(0)
+
+//   useEffect(() => {
+//     console.log('useEffect1')
+//   }, [])
+
+//   useEffect(() => {
+//     console.log('useEffect2')
+
+//     return () => {
+//       console.log('useEffect2 destroy')
+//     }
+//   }, [num])
+
+//   useLayoutEffect(() => {
+//     console.log('useLayoutEffect')
+
+//     return () => {
+//       console.log('useLayoutEffect destroy')
+//     }
+//   }, [num])
+
+//   return (
+//     <div>
+//         哈哈哈啊哈
+//         <h2>-------------- useEffect 和 useLayoutEffect --------------</h2>
+//         <h3>{num}</h3>
+//         <button onClick={() => setNum(num + 1)}>改变</button>
+//     </div>
+//   )
+// }
+
+// const root = createRoot(document.getElementById('root'))
+// root.render(<FuncComponent />)
+
+
+// ----------------------- 调度系统 -----------------------
+import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 function FuncComponent() {
-
   const [num, setNum] = useState(0)
-
-  useEffect(() => {
-    console.log('useEffect1')
-  }, [])
-
-  useEffect(() => {
-    console.log('useEffect2')
-
-    return () => {
-      console.log('useEffect2 destroy')
-    }
-  }, [num])
-
-  useLayoutEffect(() => {
-    console.log('useLayoutEffect')
-
-    return () => {
-      console.log('useLayoutEffect destroy')
-    }
-  }, [num])
 
   return (
     <div>
-        哈哈哈啊哈
-        <h1>-------------- useEffect --------------</h1>
+        <h2>-------------- 调度系统 --------------</h2>
         <h3>{num}</h3>
         <button onClick={() => setNum(num + 1)}>改变</button>
     </div>

@@ -1,4 +1,4 @@
-import { scheduleCallback } from 'scheduler'
+import { scheduleCallback, NormalPriority as NormalSchedulerPriority } from './Scheduler'
 import { createWorkInProgress } from './ReactFiber'
 import { beginWork } from './ReactFiberBeginWork'
 import { completeWork } from './ReactFiberCompleteWork'
@@ -33,7 +33,8 @@ export const scheduleUpdateOnFiber = (root) => {
 const ensureRootIsScheduled = (root) => {
   // 这里使用 bind，会创建一个闭包，保护 root 参数，null 表示不绑定 this 上下文
   // 确保即使在异步调度执行时，也能访问到正确的 root，防止在并发环境下参数丢失问题
-  scheduleCallback(performConcurrentWorkOnRoot.bind(null, root))
+  // 使用 NormalSchedulerPriority 表示当前任务的优先级为正常优先级
+  scheduleCallback(NormalSchedulerPriority, performConcurrentWorkOnRoot.bind(null, root))
 }
 
 /**
@@ -162,7 +163,8 @@ const commitRoot = (root) => {
       // 异步调用，所以 flushPassiveEffect 会延迟执行
       // 会在 commitMutationEffectsOnFiber 之后执行（commitMutationEffectsOnFiber 中做真实 DOM 的挂载）
       // 因为 useEffect 机制：异步，在浏览器绘制后执行
-      scheduleCallback(flushPassiveEffect)
+      // 使用 NormalSchedulerPriority 表示当前任务的优先级为正常优先级
+      scheduleCallback(NormalSchedulerPriority, flushPassiveEffect)
     }
   }
 

@@ -140,7 +140,9 @@ const siftDown = (heap, node, i) => {
  * @returns {*} 比较结果，如果 a 小于 b，则返回小于 0 的数，如果 a 等于 b，则返回 0，如果 a 大于 b，则返回大于 0 的数
  */
 const compare = (a, b) => {
+  // sortIndex 是任务的过期时间，即任务优先级，在 scheduleCallback 调度函数中定义
   const diff = a.sortIndex - b.sortIndex
-  // 如果 diff 一样，代表任务优先级一样，那就按照创建时间顺序
+
+  // 如果 diff （任务优先级）一样，那就按照创建顺序进行比较
   return diff !== 0 ? diff : a.id - b.id
 }

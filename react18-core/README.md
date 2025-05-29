@@ -2143,7 +2143,177 @@ const compare = (a, b) => {
 
 ## 调度系统
 
+React 的调度系统（Scheduler）是其实现 **并发模式（Concurrent Mode）** 的核心机制，负责协调任务的优先级、执行顺序和时间分配，确保高优先级任务（如用户交互）能快速响应，同时低优先级任务（如数据加载）不会阻塞主线程
 
+
+
+调度系统的核心目标：
+
+- **时间切片（Time Slicing）**：将长任务拆分为多个 5ms 的小任务，避免阻塞主线程。
+- **优先级调度**：高优先级任务（如点击事件）优先执行，低优先级任务可被中断或延迟。
+- **任务抢占（Preemption）**：高优先级任务可中断正在执行的低优先级任务。
+- **批量更新（Batching）**：合并多个状态更新，减少不必要的渲染。
+
+
+
+### 调度系统的核心逻辑
+
+调度的核心入口函数是 scheduleCallback：
+
+- 首先获取当前时间，然后通过优先级判断，得到允许超时时间
+
+- 计算当前任务的过期时间，即：当前时间 + 允许超时时间
+
+- 创建一个 task 任务对象
+
+  >```js
+  >const newTask = {
+  >  id: taskIdCounter++, // 任务序号
+  >  callback, // 这个回调函数就是当前的任务
+  >  priorityLevel, // 优先级
+  >  startTime, // 开始时间
+  >  expirationTime, // 过期时间
+  >  sortIndex: expirationTime // 通过这个字段，可以在最小堆中比较大小
+  >}
+  >```
+
+- 将这个任务添加进任务队列（任务队列是最小堆结构）
+
+- 执行 requestHostCallback(workLoop)，这是真正开始执行任务
+
+- 返回这个任务对象 newTask
+
+
+
+执行调度的函数 requestHostCallback：
+
+- 将 workLoop 保存到全局变量 scheduleHostCallback 中
+
+  - workLoop 是工作循环调度函数
+
+- 执行 schedulePerformWorkUntilDeadline
+
+  - 这里会直接 `port2.postMessage(null)`
+
+    > 这里为什么使用 new MessageChannel 呢？
+    >
+    > 在浏览器中：同步任务 -> 微任务 -> MessageChannel -> 宏任务
+    >
+    > 
+    >
+    > 使用 MessageChannel 比使用 setTimeout 更早执行
+    >
+    > 而且就算 setTimeout 设置为 0，也只是最小值，在大多数浏览器中是 4ms
+    >
+    > 
+    >
+    > 其次，如果还有任务没有执行完，通过 postMessage 通知触发任务执行，将这个任务加入到事件循环队列
+    >
+    > 等待下一次事件循环执行
+
+    全局定义了 new MessageChannel
+
+    > ```js
+    > /**
+    >  * MessageChannel 通讯的基本使用
+    >  * 
+    >  * port1 和 port2 可以互相发送消息，实现全双工通信
+    >  *
+    >  * 
+    >  * const channel = new MessageChannel()
+    >  * 
+    >  * // 端口1 发送消息到端口2
+    >  * channel.port1.postMessage("Ping")
+    >  * 
+    >  * // 端口2 监听消息
+    >  * channel.port2.onmessage = (event) => {
+    >  *   console.log("Port2 received:", event.data) // "Ping"
+    >  *   channel.port2.postMessage("Pong")
+    >  * }
+    >  * 
+    >  * // 端口1 接收回复
+    >  * channel.port1.onmessage = (event) => {
+    >  *   console.log("Port1 received:", event.data) // "Pong"
+    >  * }
+    >  * 
+    >  */
+    > const channel = new MessageChannel()
+    > const port2 = channel.port2
+    > const port1 = channel.port1
+    > port1.onmessage = performWorkUntilDeadline
+    > ```
+
+
+
+performWorkUntilDeadline，channel.port1 中定义了监听函数 performWorkUntilDeadline，这里面的逻辑：
+
+- 判断全局变量 scheduleHostCallback 是否为空，scheduleHostCallback 就是赋值的 workLoop 函数
+- 不为空，获取当前时间，保存到全局变量中，表示工作循环开始的时间。调用：`scheduleHostCallback(startTime)`，scheduleHostCallback 会返回 true 或者 false
+  - 如果返回 true，说明还有工作，继续通过 schedulePerformWorkUntilDeadline 调度执行
+  - 这是时间分片循环的要点
+
+
+
+最后看回调度任务核心函数 workLoop 函数：
+
+- 获取工作循环开始时间为 currentTime
+
+- peek 获取堆顶任务为当前任务 currentTask
+
+- 当 currentTask 不为 null，进入 while 循环
+
+  - 如果当前任务未过期，但是应该交还控制权给主机（浏览器没时间了），则停止执行
+
+  - 通过 currentTask.callback 获取回调函数 callback，就是当前任务函数
+
+  - 通过 currentTask.expirationTime <= currentTime 判断当前任务是否过期
+
+  - 执行任务回调函数，并传入是否超时的标志 `const continuationCallback = callback(didUserCallbackTimeout)`
+
+    > callback 任务函数，可以拿到当前任务是否过期的标识，决定是否中断任务，这是 react 实现 中断与恢复机制 的关键
+
+  - 判断 continuationCallback 是否是函数，如果是函数，说明之前任务还有没完成的，保存到 currentTask.callback，返回 true
+
+  - 从任务队列（最小堆）中移除已经执行完的任务
+
+  - currentTask 赋值新任务
+
+- 最后，返回 false。返回值含义：如果还有未完成的任务，返回 true；否则返回 false
+
+
+
+当 workLoop 返回 true 的时候，说明还有工作，会在 performWorkUntilDeadline 中继续通过调用 `schedulePerformWorkUntilDeadline` 进入下一轮工作循环
+
+
+
+**总结下调度核心逻辑：**
+
+1. 任务创建：组件更新时，React 创建一个任务并分配优先级
+2. 任务入队：任务被添加到基于最小堆的优先队列
+3. 任务调度：通过 MessageChannel 安排执行
+4. 任务执行：
+   - 在 5ms 时间片内执行尽可能多的工作
+   - 检查是否需要让出控制权
+   - 支持任务中断与恢复
+5. 循环处理：如果还有更多工作，安排下一个时间片
+
+
+
+### 任务优先级与事件优先级
+
+
+
+
+
+### Lane 模型下的更新队列
+
+
+
+
+
+### 加入优先级的初始化渲染
+
+ 
 
 
 
