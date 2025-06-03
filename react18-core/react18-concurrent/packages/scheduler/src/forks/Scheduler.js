@@ -210,7 +210,7 @@ const shouldYieldToHost = () => {
   // 计算当前时间与执行工作循环开始时间的差值
   const timeElapsed = getCurrentTime() - startTime
 
-  // 如果时间差小于时间分片间隔，则不交还控制权给主机
+  // 如果时间差小于时间分片间隔，则不交还控制权给主机（浏览器还有空，还能执行任务）
   if (timeElapsed < frameInterval) return false
 
   return true

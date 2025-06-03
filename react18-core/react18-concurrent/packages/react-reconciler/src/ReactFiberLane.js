@@ -112,9 +112,12 @@ export const mergeLanes = (a, b) => {
 
 /**
  * 是否包括阻塞车道（在并发渲染中使用）
+ * 
+ * 若返回 true，React 会跳过时间切片（Time Slicing），直接执行 performSyncWorkOnRoot
+ * 若返回 false，则进入并发渲染模式（performConcurrentWorkOnRoot），允许任务中断
  * @param {*} root FiberRoot 节点
  * @param {*} lanes 车道
- * @returns 如果包括阻塞车道则返回 false
+ * @returns 
  */
 export const includesBlockingLane = (root, lanes) => {
   if (allowConcurrentByDefault) return false
