@@ -2189,12 +2189,12 @@ React 的调度系统（Scheduler）是其实现 **并发模式（Concurrent Mod
 
   >```js
   >const newTask = {
-  >  id: taskIdCounter++, // 任务序号
-  >  callback, // 这个回调函数就是当前的任务
-  >  priorityLevel, // 优先级
-  >  startTime, // 开始时间
-  >  expirationTime, // 过期时间
-  >  sortIndex: expirationTime // 通过这个字段，可以在最小堆中比较大小
+  >    id: taskIdCounter++, // 任务序号
+  >    callback, // 这个回调函数就是当前的任务
+  >    priorityLevel, // 优先级
+  >    startTime, // 开始时间
+  >    expirationTime, // 过期时间
+  >    sortIndex: expirationTime // 通过这个字段，可以在最小堆中比较大小
   >}
   >```
 
@@ -2284,6 +2284,12 @@ performWorkUntilDeadline，channel.port1 中定义了监听函数 performWorkUnt
 - 当 currentTask 不为 null，进入 while 循环
 
   - 如果当前任务未过期，但是应该交还控制权给主机（浏览器没时间了），则停止执行
+
+    > 60fps 的显示器每帧约 16.7ms
+    >
+    > react 的时间分片默认分配时间为 5ms
+    >
+    > 允许 React 在一帧内完成工作，同时留出足够时间给浏览器处理其他任务
 
   - 通过 currentTask.callback 获取回调函数 callback，就是当前任务函数
 
@@ -2565,13 +2571,609 @@ export const lanesToEventPriority = (lanes) => {
 
 ### Lane 模型下的更新队列
 
+这个主要涉及下面文件的 `processUpdateQueue` 函数：
 
+> packages/react-reconciler/src/ReactFiberClassUpdateQueue.js
+
+
+
+#### 修改初始化更新队列函数
+
+ `initializeUpdateQueue ` 函数需要加两个参数
+
+```js
+/**
+ * 初始化 Fiber 节点更新队列（createRoot 过程 createFiberRoot 中调用）
+ * @param {*} fiber RootFiber 节点
+ */
+export const initializeUpdateQueue = (fiber) => {
+  const queue = {
+    baseState: fiber.memoizedState, // 本次更新前该Fiber节点的state，此后的计算是基于该state计算更新后的state
+    firstBaseUpdate: null, // 上次渲染时遗留下来的低优先级任务会组成一个链表，该字段指向到该链表的头节点
+    lastBaseUpdate: null, // 上次渲染时遗留下来的低优先级任务会组成一个链表，该字段指向到该链表的尾节点
+    shared: { // 本次渲染时要执行的任务，会存放在shared.pending中，这里是环形链表，更新时，会将其拆开，链接到 lastBaseUpdate 的后面
+      pending: null // 创建一个新的更新队列，pending 是一个循环链表
+    }
+  }
+
+  // 将更新队列挂载到 fiber 节点上 updateQueue 属性上
+  fiber.updateQueue = queue
+}
+```
+
+queue 会加多三个参数：
+
+- baseState：本次更新前该 Fiber 节点的 state，此后的计算是基于该 state 计算更新后的 state
+- firstBaseUpdate：上次渲染时遗留下来的低优先级任务会组成一个链表，该字段指向到该链表的头节点
+- lastBaseUpdate：上次渲染时遗留下来的低优先级任务会组成一个链表，该字段指向到该链表的尾节点
+
+这里其实就是多了一个 baseQueue，已积累的更新队列，就是上一次渲染周期中未处理完的更新
+
+
+
+#### 修改更新队列核心函数
+
+修改 ``processUpdateQueue` 函数：
+
+```js
+/**
+ * 处理更新队列，根据旧状态和更新队列中的更新计算最新的状态
+ * 最后 workInProgress.memoizedState 中会挂载 element 结构
+ * 
+ * 在 beginWork 阶段的, 如果是 HostRoot 类型，会通过 updateHostRoot 函数调用 processUpdateQueue
+ * @param {*} workInProgress 需要计算新状态的 Fiber 节点
+ * @param {*} nextProps 新的 props
+ * @param {*} renderLanes 渲染车道（当前渲染需要处理的优先级）
+ */
+export const processUpdateQueue = (workInProgress, nextProps, renderLanes) => {
+  // 在 render 函数阶段，就已经通过 enqueueUpdate 处理了更新队列 updateQueue
+  // 获取当前 Fiber 节点的更新队列
+  const queue = workInProgress.updateQueue
+
+  // firstBaseUpdate 和 lastBaseUpdate 在 initializeUpdateQueue 初始化更新队列的时候添加了
+  let firstBaseUpdate = queue.firstBaseUpdate
+  let lastBaseUpdate = queue.lastBaseUpdate
+  const pendingQueue = queue.shared.pending
+
+  // 如果有待处理的更新
+  if (pendingQueue !== null) {
+    // render 阶段通过 enqueueUpdate 函数创建更新队列使用了单向循环链表
+    // pending 指向最后一个更新，它的 next 即 pending.next 指向指向第一个更新
+
+    // 取出最后一个更新
+    const lastPendingUpdate = pendingQueue
+    // 取出第一个更新
+    const firstPendingUpdate = lastPendingUpdate.next
+
+    // 处理好后，将 pending 指向 null，清空 pending 队列
+    queue.shared.pending = null
+
+    // 断开循环链表，准备处理更新
+    // 为什么需要断开循环链表？
+    // 一开始为单向环形链表：A → B → C → A，如果直接遍历环形链表而不断开：A → B → C → A → B → C → ...（无限循环）
+    // 断开循环链表：A → B → C → null，链表变为单向链表，不会无限循环
+    lastPendingUpdate.next = null
+
+    /**
+     * 要理解这段代码，首先了解两个概念
+     *  - pendingQueue：新加入的、尚未处理的更新（当前渲染周期产生的更新）
+     *  - baseUpdate：已积累的更新队列（就是上一次渲染周期中未处理完的更新）
+     * 
+     * 作用​​：将 pendingQueue 的更新追加到 baseUpdate 队列的末尾，保持更新顺序
+     * 
+     * 
+     * 
+     * 使用两个更新队列，并最后合并到 baseUpdate：
+     *  - 更新连续性保证：确保了 React 的更新是连续的，即使在中断渲染后恢复，也能保证所有更新按正确顺序处理
+     * 
+     *  - 优先级系统的支持：更新可能有不同的优先级，通过链表结构，React 可以：
+     *     - 保存低优先级更新，等待后续处理
+     *     - 插入高优先级更新，优先处理
+     *     - 在处理完高优先级更新后，继续处理低优先级更新
+     * 
+     *  - 中断与恢复机制：在 React 的并发模式中，渲染工作可能被中断。这段代码确保
+     *     - 中断前已处理的更新不会丢失
+     *     - 中断时未处理的更新会被保存在 baseUpdate 链表中
+     *     - 恢复渲染时，可以从中断点继续处理
+     * 
+     * 
+     * 
+     * 场景一：批量更新
+     *  - 多个 setState 触发的更新会被合并到 pendingQueue，最终统一处理
+     * 
+     * 场景二：连续的状态更新
+     * 当用户快速点击按钮多次，触发多次状态更新时，React 会创建三个更新对象，通过链表连接起来，确保它们按顺序处理
+     */
+    if (lastBaseUpdate === null) {
+      // 当没有积累的更新时，将 pendingQueue 的第一个更新作为第一个积累的更新
+      firstBaseUpdate = firstPendingUpdate
+    } else {
+      // 当有积累的更新时，将 pendingQueue 的第一个更新追加到积累的更新队列的末尾
+      lastBaseUpdate.next = firstPendingUpdate
+    }
+
+    // 将 pendingQueue 的最后一个更新作为最后一个积累的更新
+    lastBaseUpdate = lastPendingUpdate
+  }
+
+  // 如果存在积累的更新，则需要处理这些更新
+  if (firstBaseUpdate !== null) {
+    let newState = queue.baseState
+    let newLanes = NoLanes
+    let newBaseState = null
+    let newFirstBaseUpdate = null
+    let newLastBaseUpdate = null
+
+    let update = firstBaseUpdate
+    
+    do {
+      // createUpdate 初始化 update 对象的时候，会有 lane
+      const updateLane = update.lane
+
+      /**
+       * isSubsetOfLanes(renderLanes, updateLane)表示：updateLane 是 renderLanes 的子集
+       * 但是这里取反了，所以：
+       *  - 如果 updateLane 是 renderLanes 的子集，则不处理这次更新
+       *  - 如果 updateLane 不是 renderLanes 的子集，则处理这次更新
+       * 
+       * 表示：如果这次更新优先级（renderLanes）不在当前渲染优先级（renderLanes）内，那么这次不做处理，但是需要保存到 baseUpdate 中
+       */
+      if (!isSubsetOfLanes(renderLanes, updateLane)) {
+
+        /**
+         * 若当前 update 的操作的优先级不够。跳过此更新
+         * 将该 update 放到新的队列中，为了保证链式操作的连续性，下面 else 逻辑中已经可以执行的 update，也放到这个队列中
+         */
+        const clone = {
+          id: update.id,
+          lane: updateLane,
+          tag: update.tag,
+          payload: update.payload,
+          next: null
+        }
+        
+        if (newLastBaseUpdate === null) {
+          newFirstBaseUpdate = newLastBaseUpdate = clone
+          newBaseState = newState
+        } else {
+          newLastBaseUpdate = newLastBaseUpdate.next = clone
+        }
+
+        newLanes = mergeLanes(newLanes, updateLane)
+      } else {
+        // 如果这次更新优先级（renderLanes）在当前渲染优先级（renderLanes）内，需要进行更新
+
+        if (newLastBaseUpdate !== null) {
+          /**
+           * 若存储低优先级的更新链表不为空，则为了操作的完整性，即使当前 update 会执行
+           * 也将当前的 update 节点也拼接到后面
+           */
+          const clone = {
+            id: update.id,
+            lane: 0,
+            tag: update.tag,
+            payload: update.payload,
+            next: null
+          }
+
+          newLastBaseUpdate = newLastBaseUpdate.next = clone
+        }
+        
+        newState = getStateFromUpdate(update, newState)
+      }
+
+      update = update.next
+    } while (update)
+
+    if (newLastBaseUpdate === null) {
+      newBaseState = newState
+    }
+
+    queue.baseState = newBaseState
+    queue.firstBaseUpdate = newFirstBaseUpdate
+    queue.lastBaseUpdate = newLastBaseUpdate
+
+    workInProgress.lanes = newLanes
+    workInProgress.memoizedState = newState
+  }
+}
+```
+
+有调度体系的 `processUpdateQueue` 函数主要作用：
+
+- **合并更新**：将待处理的更新（`pendingQueue`）合并到基础队列（`baseUpdate`）中，形成完整的更新链表
+- **优先级过滤**：根据当前渲染优先级（`renderLanes`）跳过不相关的低优先级更新
+- **计算最新状态**：遍历有效的更新队列，逐步计算出组件的最新状态（`memoizedState`）
+
+
+
+#### 修改 `enqueueUpdate` 函数
+
+```js
+/**
+ * 将更新对象、Lane 等信息添加到全局队列 concurrentQueues中（在 render 流程 updateContainer 中用到）
+ * 
+ * @param {*} fiber RootFiber 节点
+ * @param {*} update 更新对象
+ * @param {*} lane 车道信息
+ * @returns FiberRoot 节点
+ */
+export const enqueueUpdate = (fiber, update, lane) => {
+  // updateQueue 会在 createFiberRoot 中初始化
+  const updateQueue = fiber.updateQueue
+  const sharedQueue = updateQueue.shared
+
+  // 原始版是通过链表（可以查看react18-basic），Lane 版本是通过 Lane 来管理更新
+  return enqueueConcurrentClassUpdate(fiber, sharedQueue, update, lane)
+}
+
+
+
+// ----------------------------------------------------------------------------------------
+
+export const enqueueConcurrentClassUpdate = (fiber, queue, update, lane) => {
+  enqueueUpdate(fiber, queue, update, lane)
+
+  return getRootForUpdatedFiber(fiber)
+}
+
+const enqueueUpdate = (fiber, queue, update, lane) => {
+  // 这里的 concurrentQueuesIndex++ 会不断将 concurrentQueuesIndex + 1
+  concurrentQueues[concurrentQueuesIndex++] = fiber
+  concurrentQueues[concurrentQueuesIndex++] = queue
+  concurrentQueues[concurrentQueuesIndex++] = update
+  concurrentQueues[concurrentQueuesIndex++] = lane
+}
+```
+
+对比没有 Lane 版本：
+
+- 没有 Lane 版本是 enqueueUpdate 中直接形成更新队列链表，然后在 `processUpdateQueue` 中循环链表来拿到最新状态值 memoizedState
+- 有 Lane 版本是将信息先存到全局队列 concurrentQueues 中
 
 
 
 ### 加入优先级的初始化渲染
 
- 
+这个贯穿整个初始化渲染流程
+
+
+
+#### createRoot 阶段加入 Lane
+
+在创建 FiberRoot：整个应用程序的根节点的时候，加入 Lane
+
+> createRoot --> createContainer --> createFiberRoot --> new FiberRootNode()
+
+```js
+function FiberRootNode(containerInfo) {
+  this.containerInfo = containerInfo
+  this.pendingLanes = NoLanes
+}
+```
+
+
+
+#### render 阶段加入 Lane
+
+`updateContainer` 中
+
+```js
+export const updateContainer = (element, container) => {
+  // 拿到 RootFiber
+  const current = container.current
+
+  // 获取优先级 Lane
+  const lane = requestUpdateLane(current)
+
+  // 创建带优先级 Lane 的更新对象
+  const update = createUpdate(lane)
+
+  // 将要更新的虚拟 DOM 保存在更新对象 update.payload 中
+  update.payload = { element }
+
+  // 将更新对象 update、Lane 等信息，添加到全局队列 concurrentQueues 中，并返回 FiberRoot
+  const root = enqueueUpdate(current, update, lane)
+
+  // 调度更新（调度更新的入口函数）
+  scheduleUpdateOnFiber(root, current, lane)
+}
+
+
+
+
+// ------------------------------------------------------------------------------------
+
+export const requestUpdateLane = () => {
+  // 获取当前的更新优先级
+  const updateLane = getCurrentUpdatePriority()
+
+  // 初始化渲染阶段，updateLane 肯定是 NoLane
+  if (updateLane !== NoLane) return updateLane
+
+  const eventLane = getCurrentEventPriority()
+
+  return eventLane
+}
+
+
+/** 当前更新优先级值 */
+let currentUpdatePriority = NoLane
+
+
+export const getCurrentUpdatePriority = () => {
+  return currentUpdatePriority
+}
+
+
+export const getCurrentEventPriority = () => {
+  const currentEvent = window.event
+
+  // 初始化阶段，不会触发事件，那么 currentEvent 肯定是 undefined
+  if (currentEvent === undefined) {
+    return DefaultEventPriority
+  }
+
+  return getEventPriority(currentEvent.type)
+}
+
+
+export const getEventPriority = (domEventName) => {
+  switch (domEventName) {
+    case 'click':
+      return DiscreteEventPriority
+    case 'drag':
+      return ContinuousEventPriority
+    default:
+      return DefaultEventPriority
+  }
+}
+```
+
+- 首先通过 requestUpdateLane 获取当前的优先级 Lane
+
+  - 先通过 getCurrentUpdatePriority 获取全局定义的优先级，初始化渲染阶段肯定是 NoLane
+  - 当是 NoLane 时，通过 getCurrentEventPriority 获取事件优先级
+    - 先通过 window.event 获取事件，初始化没有触发事件，那么 currentEvent 是 undefined，那么返回 DefaultEventPriority
+    - 如果 currentEvent 不是 undefined，那么通过 getEventPriority 根据事件名获取优先级
+
+- 然后，createUpdate 创建更新对象的时候，会加入优先级
+
+  ```js
+  export const createUpdate = (lane) => {
+    const update = {
+      lane,
+      tag: UpdateState,
+      payload: null, // 存放虚拟 DOM
+      next: null
+    }
+  
+    return update
+  }
+  ```
+
+- 接着，通过 enqueueUpdate 将 更新对象 update、Lane 等信息，添加到全局队列 concurrentQueues 中
+
+  ```js
+  export const enqueueUpdate = (fiber, update, lane) => {
+    // updateQueue 会在 createFiberRoot 中初始化
+    const updateQueue = fiber.updateQueue
+    const sharedQueue = updateQueue.shared
+  
+    // 原始版是通过链表（可以查看react18-basic），Lane 版本是通过 Lane 来管理更新
+    return enqueueConcurrentClassUpdate(fiber, sharedQueue, update, lane)
+  }
+  
+  
+  
+  // -------------------------------------------------------------------------------
+  export const enqueueConcurrentClassUpdate = (fiber, queue, update, lane) => {
+    enqueueUpdate(fiber, queue, update, lane)
+  
+    return getRootForUpdatedFiber(fiber)
+  }
+  
+  // 这个是另外一个文件的 enqueueUpdate 函数，与上面的要做区分
+  const enqueueUpdate = (fiber, queue, update, lane) => {
+    // 这里的 concurrentQueuesIndex++ 会不断将 concurrentQueuesIndex + 1
+    concurrentQueues[concurrentQueuesIndex++] = fiber
+    concurrentQueues[concurrentQueuesIndex++] = queue
+    concurrentQueues[concurrentQueuesIndex++] = update
+    concurrentQueues[concurrentQueuesIndex++] = lane
+  }
+  ```
+
+- 最后，通过 scheduleUpdateOnFiber 调度更新，也会传入 Lane 参数
+
+
+
+#### 调度更新阶段加入 Lane
+
+```js
+export const scheduleUpdateOnFiber = (root, fiber, lane) => {
+  // 标记根节点更新
+  markRootUpdated(root, lane)
+
+  ensureRootIsScheduled(root, fiber, lane)
+}
+
+
+/**
+ * 标记根节点更新
+ * @param {*} root FiberRoot 节点
+ * @param {*} updateLane 更新车道
+ */
+export const markRootUpdated = (root, updateLane) => {
+  root.pendingLanes |= updateLane
+}
+```
+
+这里将 updateLane 添加到了 FiberRoot 的 pendingLanes 上，下面使用 getNextLanes 获取 FiberRoot 的优先级车道的时候会用到
+
+> 这里的 updateLane 是在 updateContainer 中 设置的 DefaultEventPriority（默认优先级）
+
+
+
+ensureRootIsScheduled 函数需要重写，区分同步和并发
+
+```js
+const ensureRootIsScheduled = (root) => {
+
+  // 获取 FiberRoot 的优先级车道
+  const nextLanes = getNextLanes(root)
+  // 获取最高优先级车道（这里有点冗余？getNextLanes 中已经回获取最高优先级了）
+  const newCallbackPriority = getHighestPriorityLane(nextLanes)
+
+  if (newCallbackPriority === SyncLane) {
+    // 同步渲染（TODO: 暂时使用 scheduleCallback 代替，后续要改为同步渲染函数）
+    scheduleCallback(NormalSchedulerPriority, performConcurrentWorkOnRoot.bind(null, root))
+  } else {
+    // 异步渲染
+
+    let schedulerPriorityLevel
+
+    // lanesToEventPriority：将车道 Lane 转换为事件优先级
+    switch (lanesToEventPriority(nextLanes)) {
+      case DiscreteEventPriority:
+        // 如果是离散事件优先级，则使用立即执行优先级
+        // ImmediatePriority 在 Scheduler 中定义，代表立即执行
+        schedulerPriorityLevel = ImmediateSchedulerPriority
+        break
+      case ContinuousEventPriority:
+        // 如果是连续事件优先级，则使用用户阻塞优先级
+        schedulerPriorityLevel = UserBlockingSchedulerPriority
+        break
+      case DefaultEventPriority:
+        // 其他情况，使用正常优先级
+        schedulerPriorityLevel = NormalSchedulerPriority
+        break
+      case IdleEventPriority:
+        // 空闲优先级
+        schedulerPriorityLevel = IdleSchedulerPriority
+        break
+      default:
+        // 其他情况，使用正常优先级
+        schedulerPriorityLevel = NormalSchedulerPriority
+        break
+    }
+    
+    // 这里使用 bind，会创建一个闭包，保护 root 参数，null 表示不绑定 this 上下文
+    // 确保即使在异步调度执行时，也能访问到正确的 root，防止在并发环境下参数丢失问题
+    scheduleCallback(schedulerPriorityLevel, performConcurrentWorkOnRoot.bind(null, root))
+  }
+}
+```
+
+- 区分同步和异步任务
+- 异步任务，会进行优先级协调，最后通过 `scheduleCallback` 调度 `performConcurrentWorkOnRoot`，**实现时间切片和中断**
+
+
+
+performConcurrentWorkOnRoot 函数：
+
+```js
+const performConcurrentWorkOnRoot = (root, timeout) => {
+
+  // 获取 FiberRoot 上的优先级
+  // 经过 scheduleUpdateOnFiber 的 markRootUpdated 设置后，初始化阶段的是默认优先级
+  const nextLane = getNextLanes(root)
+  if (nextLane === NoLanes) return null
+
+  // 这并不是渲染到页面，而是对 Fiber 树进行一系列的构建和操作
+  // 创建 workInProgress，以及 beginWork 和 completeWork 阶段在这里面
+  renderRootSync(root, nextLane)
+
+  // .....
+}
+```
+
+- 通过 getNextLanes 获取 FiberRoot 上的优先级，然后透传到 renderRootSync
+
+
+
+然后在
+
+```js
+let workInProgressRenderLanes = NoLanes
+
+
+const renderRootSync = (root, renderLanes) => {
+  // 创建 workInProgress Fiber 树
+  prepareFreshStack(root, renderLanes)
+  // 循环处理 Fiber 树，beginWork 和 completeWork 阶段都在这里
+  workLoopSync()
+}
+
+
+const prepareFreshStack = (root, renderLanes) => {
+
+  workInProgress = createWorkInProgress(root.current, null)
+
+  workInProgressRenderLanes = renderLanes
+
+  // 批量处理并发更新队列的，将多个并发的状态更新（如 useReducer）合并到对应 Fiber 节点的更新队列（queue.pending）中
+  finishQueueingConcurrentUpdates()
+}
+```
+
+继续透传 renderLanes，在 prepareFreshStack 中将 renderLanes 保存到全局变量 workInProgressRenderLanes
+
+
+
+调度阶段最后，workLoopSync 中进行循环
+
+```js
+const workLoopSync = () => {
+  while(workInProgress !== null) {
+    performUnitOfWork(workInProgress)
+  }
+}
+
+
+const performUnitOfWork = (unitOfWork) => {
+  const current = unitOfWork.alternate
+  // 返回的 next 是 子 Fiber 节点
+  const next = beginWork(current, unitOfWork, workInProgressRenderLanes)
+
+
+  // ....
+}
+```
+
+在执行 beginWork 时，拿到设置的全局变量 workInProgressRenderLanes，执行 beginWork 函数，进入 beginWork 阶段
+
+
+
+#### beginWork 阶段加入 Lane
+
+beginWork 阶段：
+
+```js
+export const beginWork = (current, workInProgress, renderLanes) => {
+  switch (workInProgress.tag) {
+		// ......
+    case HostRoot:
+      return updateHostRoot(current, workInProgress, renderLanes)
+
+   // ......
+  }
+}
+
+
+
+const updateHostRoot = (current, workInProgress, renderLanes) => {
+  const nextProps = workInProgress.pendingProps
+  // 根据旧状态和更新队列中的更新计算最新的状态
+  processUpdateQueue(workInProgress, nextProps, renderLanes)
+
+  // ......
+}
+```
+
+- 可以看到，beginWork 中调用 updateHostRoot
+- updateHostRoot 中会调用 processUpdateQueue，根据旧状态和更新队列中的更新计算最新的状态
+
+这就将基本就完成了 Lane 闭环
 
 
 

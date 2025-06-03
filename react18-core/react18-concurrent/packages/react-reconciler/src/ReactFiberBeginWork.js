@@ -16,7 +16,7 @@ import { renderWithHooks } from './ReactFiberHooks'
  * @param {*} workInProgress 正在构建的 Fiber 树
  * @returns Fiber 子节点 | null
  */
-export const beginWork = (current, workInProgress) => {
+export const beginWork = (current, workInProgress, renderLanes) => {
   switch (workInProgress.tag) {
     case IndeterminateComponent:
       // 首次渲染，workInProgress.tag 不确定时走这个函数处理
@@ -27,7 +27,7 @@ export const beginWork = (current, workInProgress) => {
       const nextProps = workInProgress.pendingProps
       return updateFunctionComponent(current, workInProgress, Component, nextProps)
     case HostRoot:
-      return updateHostRoot(current, workInProgress)
+      return updateHostRoot(current, workInProgress, renderLanes)
     case HostComponent:
       return updateHostComponent(current, workInProgress)
     case HostText:
@@ -87,9 +87,10 @@ const updateFunctionComponent = (current, workInProgress, Component, nextProps) 
  * @param {*} workInProgress 正在构建的 Fiber 树
  * @returns 第一个子 Fiber 节点
  */
-const updateHostRoot = (current, workInProgress) => {
+const updateHostRoot = (current, workInProgress, renderLanes) => {
+  const nextProps = workInProgress.pendingProps
   // 根据旧状态和更新队列中的更新计算最新的状态
-  processUpdateQueue(workInProgress)
+  processUpdateQueue(workInProgress, nextProps, renderLanes)
 
   // 获取新状态
   // 经过 processUpdateQueue 处理完之后，workInProgress.memoizedState 就是新的状态

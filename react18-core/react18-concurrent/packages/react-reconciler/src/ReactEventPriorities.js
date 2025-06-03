@@ -1,4 +1,5 @@
 import {
+  NoLane,
   DefaultLane,
   IdleLane,
   InputContinuousLane,

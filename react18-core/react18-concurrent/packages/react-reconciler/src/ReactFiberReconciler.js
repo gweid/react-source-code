@@ -1,6 +1,6 @@
 import { createFiberRoot } from './ReactFiberRoot'
 import { createUpdate, enqueueUpdate } from './ReactFiberClassUpdateQueue'
-import { scheduleUpdateOnFiber } from './ReactFiberWorkLoop'
+import { scheduleUpdateOnFiber, requestUpdateLane } from './ReactFiberWorkLoop'
 
 /**
  * 创建 FiberRoot
@@ -20,15 +20,18 @@ export const updateContainer = (element, container) => {
   // 拿到 RootFiber
   const current = container.current
 
-  // 创建更新对象
-  const update = createUpdate()
+  // 获取优先级 Lane
+  const lane = requestUpdateLane(current)
+
+  // 创建带优先级 Lane 的更新对象
+  const update = createUpdate(lane)
 
   // 将要更新的虚拟 DOM 保存在更新对象 update.payload 中
   update.payload = { element }
 
-  // 将更新对象 update 保存到 RootFiber.updateQueue 中，并返回 FiberRoot
-  const root = enqueueUpdate(current, update)
+  // 将更新对象 update、Lane 等信息，添加到全局队列 concurrentQueues 中，并返回 FiberRoot
+  const root = enqueueUpdate(current, update, lane)
 
   // 调度更新（调度更新的入口函数）
-  scheduleUpdateOnFiber(root)
+  scheduleUpdateOnFiber(root, current, lane)
 }

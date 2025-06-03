@@ -1,9 +1,10 @@
 import objectIs from 'shared/objectIs'
 import ReactSharedInternals from 'shared/ReactSharedInternals'
 import { enqueueConcurrentHookUpdate } from './ReactFiberConcurrentUpdates'
-import { scheduleUpdateOnFiber } from './ReactFiberWorkLoop'
+import { scheduleUpdateOnFiber, requestUpdateLane } from './ReactFiberWorkLoop'
 import { Passive as PassiveEffect, Update as UpdateEffect } from './ReactFiberFlags'
 import { HasEffect as HookHasEffect, Passive as HookPassive, Layout as HookLayout } from './ReactHookEffectTags'
+import { NoLanes } from './ReactFiberLane'
 
 const { ReactCurrentDispatcher } = ReactSharedInternals
 
@@ -393,28 +394,34 @@ const dispatchReducerAction = (fiber, queue, action) => {
  * @param {*} action 更新动作
  */
 const dispatchSetState = (fiber, queue, action) => {
+  const lane = requestUpdateLane()
   const update = {
+    lane,
     action,
     hasEagerState: false, // 是否有急切的状态
     eagerState: null, // 急切的状态值
     next: null
   }
 
-  const { lastRenderedReducer, lastRenderedState } = queue
+  const alternate = fiber.alternate
 
-  // action 就是 setState 的参数，可能是 值 或者 函数
-  const eagerState = lastRenderedReducer(lastRenderedState, action)
-  update.hasEagerState = true
-  update.eagerState = eagerState
-
-  // 优化：如果值一样，就不需要更新
-  if (objectIs(eagerState, lastRenderedState)) {
-    return
+  if ((fiber.lanes === NoLanes) && (alternate === null || alternate.lanes === NoLanes)) {
+    const { lastRenderedReducer, lastRenderedState } = queue
+  
+    // action 就是 setState 的参数，可能是 值 或者 函数
+    const eagerState = lastRenderedReducer(lastRenderedState, action)
+    update.hasEagerState = true
+    update.eagerState = eagerState
+  
+    // 优化：如果值一样，就不需要更新
+    if (objectIs(eagerState, lastRenderedState)) {
+      return
+    }
   }
 
   const root = enqueueConcurrentHookUpdate(fiber, queue, update)
 
-  scheduleUpdateOnFiber(root)
+  scheduleUpdateOnFiber(root, fiber, lane)
 }
 
 

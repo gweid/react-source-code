@@ -51,7 +51,9 @@ export const markRootUpdated = (root, updateLane) => {
  * @returns 下一个车道
  */
 export const getNextLanes = (root) => {
+  // createFiberRoot 中的 FiberRootNode 会创建 pendingLanes
   const pendingLanes = root.pendingLanes
+
   // 如果没有待处理的车道（相当于 FiberRoot 节点没有优先级的任务），则返回 NoLanes
   if (pendingLanes === NoLanes) return NoLanes
 

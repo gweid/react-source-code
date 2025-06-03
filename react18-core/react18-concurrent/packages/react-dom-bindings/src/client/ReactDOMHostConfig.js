@@ -1,5 +1,7 @@
+import { DefaultEventPriority } from 'react-reconciler/src/ReactEventPriorities'
 import { setInitialProperties, diffProperties, updateProperties } from './ReactDOMComponent'
 import { precacheFiberNode, updateFiberProps } from './ReactDOMComponentTree'
+import { getEventPriority } from '../events/ReactDOMEventListener'
 
 export const shouldSetTextContent = (type, props) => {
   return typeof props.children === 'string' || typeof props.children === 'number'
@@ -107,4 +109,19 @@ export const commitUpdate = (
 
   // 将 props 挂载在真实 DOM 上，便于后面比如 事件监听 中使用
   updateFiberProps(domElement, newProps)
+}
+
+/**
+ * 获取当前事件优先级
+ * @returns 当前事件优先级
+ */
+export const getCurrentEventPriority = () => {
+  const currentEvent = window.event
+
+  // 初始化阶段，不会触发事件，那么 currentEvent 肯定是 undefined
+  if (currentEvent === undefined) {
+    return DefaultEventPriority
+  }
+
+  return getEventPriority(currentEvent.type)
 }

@@ -1,5 +1,6 @@
 import { HostRoot, HostComponent, HostText, IndeterminateComponent } from './ReactWorkTags'
 import { NoFlags } from './ReactFiberFlags'
+import { NoLanes } from './ReactFiberLane'
 
 /**
  * Fiber 节点构造函数
@@ -24,6 +25,7 @@ export function FiberNode(tag, pendingProps, key) {
   this.alternate = null              // 指向当前 Fiber 节点的替代 Fiber 节点，双缓存的关键
   this.index = 0                     // 表示同级节点中节点的位置索引
   this.deletions = null              // 要删除的子节点
+  this.lanes = NoLanes               // 当前 Fiber 节点的优先级
 }
 
 /**

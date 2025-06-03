@@ -1,6 +1,6 @@
 import { HostRoot } from "./ReactWorkTags"
 
-const concurrentQueue = []
+const concurrentQueues = []
 let concurrentQueuesIndex = 0
 
 /**
@@ -43,33 +43,51 @@ const getRootForUpdatedFiber = (sourceFiber) => {
 
 
 /**
- * 将 fiber, queue, update 存到全局变量 concurrentQueue 中，并拿到 FiberRoot 后返回
+ * 将钩子更新加入并发更新队列
+ * 将 fiber, queue, update 存到全局变量 concurrentQueues 中，并拿到 FiberRoot 后返回
  * @param {*} fiber // 正在构建的 Fiber
  * @param {*} queue // 更新队列
  * @param {*} update // 更新对象：{ action, next }
+ * @param {*} lane 车道信息
  */
-export const enqueueConcurrentHookUpdate = (fiber, queue, update) => {
-  enqueueUpdate(fiber, queue, update)
+export const enqueueConcurrentHookUpdate = (fiber, queue, update, lane) => {
+  enqueueUpdate(fiber, queue, update, lane)
 
   return getRootForUpdatedFiber(fiber)
 }
 
 /**
- * 将 fiber, queue, update 存到全局变量 concurrentQueue 中
+ * 将类组件更新加入并发更新队列
  * @param {*} fiber // 正在构建的 Fiber
- * @param {*} queue // 更新队列 { pending: null }
- * @param {*} update // 更新对象：{ action, next: null }
+ * @param {*} queue // 更新队列
+ * @param {*} update // 更新对象：{ action, next }
+ * @param {*} lane 车道信息
  */
-const enqueueUpdate = (fiber, queue, update) => {
-  // 这里的 concurrentQueuesIndex++ 会不断将 concurrentQueuesIndex + 1
-  concurrentQueue[concurrentQueuesIndex++] = fiber
-  concurrentQueue[concurrentQueuesIndex++] = queue
-  concurrentQueue[concurrentQueuesIndex++] = update
+export const enqueueConcurrentClassUpdate = (fiber, queue, update, lane) => {
+  enqueueUpdate(fiber, queue, update, lane)
+
+  return getRootForUpdatedFiber(fiber)
 }
 
 /**
- * 批量处理并发更新队列​​
+ * 将 fiber, queue, update 存到全局变量 concurrentQueues 中
+ * @param {*} fiber // 正在构建的 Fiber
+ * @param {*} queue // 更新队列 { pending: null }
+ * @param {*} update // 更新对象：{ action, next: null }
+ * @param {*} lane 车道信息
+ */
+const enqueueUpdate = (fiber, queue, update, lane) => {
+  // 这里的 concurrentQueuesIndex++ 会不断将 concurrentQueuesIndex + 1
+  concurrentQueues[concurrentQueuesIndex++] = fiber
+  concurrentQueues[concurrentQueuesIndex++] = queue
+  concurrentQueues[concurrentQueuesIndex++] = update
+  concurrentQueues[concurrentQueuesIndex++] = lane
+}
+
+/**
+ * 批量处理并发更新队列​​（在创建 workInProgress （双缓存）树后，beginWork 阶段之前调用）
  * 将多个并发的状态更新（如 useReducer）合并到对应 Fiber 节点的更新队列（queue.pending）中
+ * 在 beginWork 阶段，会调用 processUpdateQueue 处理更新队列
  */
 export const finishQueueingConcurrentUpdates = () => {
   // 保存当前队列的结束位置，并重置索引
@@ -81,9 +99,10 @@ export const finishQueueingConcurrentUpdates = () => {
   // 初始化渲染阶段，endIndex 就是 0，不会进入这里面
   while (i < endIndex) {
     // 这里的 i++ 会不断将 i + 1
-    const fiber = concurrentQueue[i++] // Fiber 节点
-    const queue = concurrentQueue[i++] // 更新队列（如 useState 的 queue）
-    const update = concurrentQueue[i++] // 更新对象：{ action, next }
+    const fiber = concurrentQueues[i++] // Fiber 节点
+    const queue = concurrentQueues[i++] // 更新队列（如 useState 的 queue）
+    const update = concurrentQueues[i++] // 更新对象：{ action, next }
+    const lane = concurrentQueues[i++]  // 优先级 Lane
 
     /**
      * 构建循环链表，两个点：

@@ -14,6 +14,7 @@ export const initializeUpdateQueue = (fiber) => {
     }
   }
 
+  // 将更新队列挂载到 fiber 节点上 updateQueue 属性上
   fiber.updateQueue = queue
 }
 
@@ -32,7 +33,7 @@ export const createUpdate = () => {
 }
 
 /**
- * 将更新对象添加到 RootFiber 节点的更新队列中
+ * 将更新对象添加到 RootFiber 节点的更新队列中 updateQueue 属性中（在 render 流程 updateContainer 中用到）
  * 
  * 实现了一个循环链表来管理更新队列，循环链表的优势：
  *  - 不需要遍历到末尾就能插入新节点
@@ -78,6 +79,9 @@ export const enqueueUpdate = (fiber, update) => {
 
 /**
  * 根据旧状态和更新队列中的更新计算最新的状态
+ * 最后 workInProgress.memoizedState 中会挂载 element 结构
+ * 
+ * 在 beginWork 阶段的, 如果是 HostRoot 类型，会通过 updateHostRoot 函数调用 processUpdateQueue
  * @param {*} workInProgress 需要计算新状态的 Fiber 节点
  */
 export const processUpdateQueue = (workInProgress) => {
