@@ -33,6 +33,7 @@ import {
   getHighestPriorityLane
 } from './ReactFiberLane'
 import { getCurrentEventPriority } from 'react-dom-bindings/src/client/ReactDOMHostConfig'
+import { scheduleSyncCallback, flushSyncCallbacks } from './ReactFiberSyncTaskQueue'
 
 // 用于记录正在工作的 Fiber 节点
 let workInProgress = null
@@ -62,7 +63,7 @@ export const scheduleUpdateOnFiber = (root, fiber, lane) => {
 }
 
 /**
- * 通过 bind 绑定 root 参数，确保即使异步调度，也能访问到正确的 root
+ * 调度更新前置区分同步和异步任务
  * @param {*} root FiberRoot
  */
 const ensureRootIsScheduled = (root) => {
@@ -73,8 +74,12 @@ const ensureRootIsScheduled = (root) => {
   const newCallbackPriority = getHighestPriorityLane(nextLanes)
 
   if (newCallbackPriority === SyncLane) {
-    // 同步任务（TODO: 暂时使用 scheduleCallback 代替，后续要改为同步渲染函数）
-    scheduleCallback(NormalSchedulerPriority, performConcurrentWorkOnRoot.bind(null, root))
+    // 同步任务
+
+    // 先将同步任务存储到同步任务队列
+    scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root))
+    // 在微任务中执行同步任务队列中的任务
+    queueMicrotask(flushSyncCallbacks)
   } else {
     // 异步任务
 
@@ -110,6 +115,30 @@ const ensureRootIsScheduled = (root) => {
     // 通过 `scheduleCallback` 调度 `performConcurrentWorkOnRoot`，实现时间切片和中断
     scheduleCallback(schedulerPriorityLevel, performConcurrentWorkOnRoot.bind(null, root))
   }
+}
+
+/**
+ * 同步渲染的核心函数
+ * @param {*} root FiberRoot
+ * @returns 
+ */
+const performSyncWorkOnRoot = (root) => {
+  // 获取 FiberRoot 上的优先级
+  // 经过 scheduleUpdateOnFiber 的 markRootUpdated 设置后，初始化阶段的是默认优先级
+  const lanes = getNextLanes(root)
+
+  // 这并不是渲染到页面，而是对 Fiber 树进行一系列的构建和操作
+  // 创建 workInProgress，以及 beginWork 和 completeWork 阶段在这里面
+  renderRootSync(root, lanes)
+
+  // 渲染后的 workInProgress 树，RootFiber，alternate 是双缓存的新 RootFiber
+  const finishedWork = root.current.alternate
+  root.finishedWork = finishedWork
+
+  // commit 阶段（挂载）
+  commitRoot(root)
+
+  return null
 }
 
 /**
