@@ -14,16 +14,19 @@ type Node = {
   ...
 };
 
+// ! 往最小堆推入元素
 export function push<T: Node>(heap: Heap<T>, node: T): void {
   const index = heap.length;
   heap.push(node);
   siftUp(heap, node, index);
 }
 
+// ! 获取堆顶元素
 export function peek<T: Node>(heap: Heap<T>): T | null {
   return heap.length === 0 ? null : heap[0];
 }
 
+// ! 移除堆顶元素
 export function pop<T: Node>(heap: Heap<T>): T | null {
   if (heap.length === 0) {
     return null;

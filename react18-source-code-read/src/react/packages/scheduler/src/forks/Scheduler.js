@@ -385,6 +385,7 @@ function unstable_scheduleCallback(
   // 过期时间，也是理论上的任务执行时间
   var expirationTime = startTime + timeout;
 
+  // 创建一个任务对象
   var newTask: Task = {
     id: taskIdCounter++,
     callback,
@@ -613,6 +614,16 @@ if (typeof localSetImmediate === 'function') {
 } else if (typeof MessageChannel !== 'undefined') {
   // DOM and Worker environments.
   // We prefer MessageChannel because of the 4ms setTimeout clamping.
+  /**
+   * 这里为什么使用 MessageChannel，其实是优先级问题
+   * 在浏览器中：同步任务 -> 微任务 -> MessageChannel -> 宏任务
+   *
+   * 使用 MessageChannel 比使用 setTimeout 更早执行
+   * 而且就算 setTimeout 设置为 0，也只是最小值，在大多数浏览器中是 4ms
+   * 
+   * 其次，如果还有任务没有执行完，通过 postMessage 通知触发任务执行，将这个任务加入到事件循环队列
+   * 等待下一次事件循环执行
+   */
   const channel = new MessageChannel();
   const port = channel.port2;
   channel.port1.onmessage = performWorkUntilDeadline;
