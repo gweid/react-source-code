@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-// import jsx from "./pages/ExamplePage";
+import jsx from "./pages/ExamplePage";
 // import TransitionPage2 from "./pages/TransitionPage2";
 // import ContextPage2 from "./pages/ContextPage2";
 // import OptimizingPage from "./pages/OptimizingPage";
@@ -19,7 +19,7 @@ const root = createRoot(document.getElementById("root"), {
 });
 
 // root.render(<ClassFunctionComponent />);
-// root.render(jsx);
+root.render(jsx);
 
 // setTimeout(() => {
 // root.render(jsx);
@@ -27,6 +27,6 @@ const root = createRoot(document.getElementById("root"), {
 
 // root.render(<TransitionPage2 />);
 
-root.render(<UseDeferredValuePage />);
+// root.render(<UseDeferredValuePage />);
 
 console.log("React", React.version); //sy-log

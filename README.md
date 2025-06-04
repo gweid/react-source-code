@@ -15,16 +15,9 @@
 
 
 
-
-React18+ 版本的核心源码文件
-
-![](./imgs/img1.jpg)
-
-
-
 ## 源码阅读篇
 
-
+[react 源码阅读](./react18-source-code-read/README.md)
 
 
 

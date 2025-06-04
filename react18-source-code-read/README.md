@@ -43,3 +43,22 @@ react18-source-code-read/
   │   ├── store                         // 调试代码（redux）
   │   └── index.js                      // 调试代码（入口文件）
 ```
+
+
+
+## react 18 源码核心文件
+
+![](../imgs/img1.jpg)
+
+
+
+## VSCode 辅助插件
+
+安装几个 vscode 插件，辅助阅读源码
+
+- Bookmarks：打书签，可以多个文件快速跳转
+
+- Better Comments：注释添加高亮颜色
+
+
+
