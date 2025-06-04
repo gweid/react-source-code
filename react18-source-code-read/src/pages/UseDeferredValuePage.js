@@ -1,5 +1,9 @@
-import { useDeferredValue, useState, memo } from "react";
-import MySlowList from "../components/MySlowList";
+import {
+  useDeferredValue,
+  useState,
+  // memo
+} from "react";
+// import MySlowList from "../components/MySlowList";
 
 export default function UseDeferredValuePage(props) {
   const [count, setCount] = useState(0);

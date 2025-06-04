@@ -1,8 +1,8 @@
 import * as React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
-import jsx from "./pages/ExamplePage";
-import TransitionPage2 from "./pages/TransitionPage2";
+// import jsx from "./pages/ExamplePage";
+// import TransitionPage2 from "./pages/TransitionPage2";
 // import ContextPage2 from "./pages/ContextPage2";
 // import OptimizingPage from "./pages/OptimizingPage";
 // import UseMemoPage from "./pages/UseMemoPage";
