@@ -18,7 +18,23 @@ const createChildReconciler = (shouldTrackSideEffects) => {
    * @returns 新的子 Fiber | null
    */
   const createChild = (returnFiber, newChild) => {
-    // 虚拟 DOM 是文本节点
+    /**
+     * 虚拟 DOM 是文本节点；为什么这里的文本节点需要处理成 Fiber 节点？
+     * 
+     * 文本节点分两种情况：button 按钮里面只有文本的，这种可以直接处理为 DOM 节点
+     *  第一种：
+     *   <div>
+     *     <button>按钮</button>
+     *   </div>
+     * 
+     * 第二种：这种，在 div 标签内，除了文本节点，还有 button，这种文本节点会被处理成 Fiber 节点，button 里面的文本节点当 DOM 处理
+     *  <div>
+     *    <button>按钮</button>
+     *    文本啦啦啦
+     *  </div>
+     * 
+     * 也就是，当时多子节点时，里面的文本要处理成 Fiber 节点
+     */
     if ((typeof newChild === 'string' && newChild !== '') || typeof newChild === 'number') { 
       const created = createFiberFromText(`${newChild}`)
       created.return = returnFiber
