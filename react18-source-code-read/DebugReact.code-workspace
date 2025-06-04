@@ -1,0 +1,66 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "better-comments.tags": [
+      {
+        "tag": "sy-",
+        "color": "yellow",
+        "strikethrough": false,
+        "underline": false,
+        "backgroundColor": "#000",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "tag": "!",
+        "color": "#cf40c2",
+        "strikethrough": false,
+        "underline": false,
+        "backgroundColor": "transparent",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "tag": "?",
+        "color": "#cf6640",
+        "strikethrough": false,
+        "underline": false,
+        "backgroundColor": "transparent",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "tag": "//",
+        "color": "#474747",
+        "strikethrough": true,
+        "underline": false,
+        "backgroundColor": "transparent",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "tag": "todo",
+        "color": "#FF8C00",
+        "strikethrough": false,
+        "underline": false,
+        "backgroundColor": "transparent",
+        "bold": false,
+        "italic": false
+      },
+      {
+        "tag": "*",
+        "color": "green", //"#9c27b0",
+        "strikethrough": false,
+        "underline": false,
+        "backgroundColor": "transparent",
+        "bold": false,
+        "italic": false
+      }
+    ],
+    "editor.cursorWidth": 2
+  }
+}
