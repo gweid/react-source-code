@@ -452,8 +452,8 @@ export function markStarvedLanesAsExpired(
   // Iterate through the pending lanes and check if we've reached their
   // expiration time. If so, we'll assume the update is being starved and mark
   // it as expired to force it to finish.
-  // 遍历pending lanes，并检查是否已经达到它们的过期时间。
-  // 如果是，我们就认为这个update挨饿了，并将其标记为已过期，以强制其完成。
+  // ! 遍历pending lanes，并检查是否已经达到它们的过期时间。
+  // ! 如果是，我们就认为这个update挨饿了，并将其标记为已过期，以强制其完成。
   // TODO: We should be able to replace this with upgradePendingLanesToSync
   //
   // We exclude retry lanes because those must always be time sliced, in order
