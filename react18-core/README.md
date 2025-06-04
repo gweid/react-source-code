@@ -285,8 +285,7 @@ Fiber 节点与 虚拟 DOM：
 
 ![](../imgs/img13.png)
 
-- beginWork 中判断 workInProgress.tag，；；是文本时，不做处理，返回 null
-  
+- beginWork 中判断 workInProgress.tag：
   - 当是根 Fiber 时，执行 updateHostRoot：
     - 调用 processUpdateQueue，根据旧状态和更新队列中的更新计算最新的状态，得到新的 memoizedState，里面包含新的虚拟 DOM 
     - 调用 reconcileChildren 函数协调子元素，这个是 beginWork 的核心，会调用 createChildReconciler 将新的子虚拟 DOM 转换为新的子 Fiber，并返回第一个子 Fiber
@@ -346,6 +345,26 @@ completeWork 函数中对不同 workInProgress.tag 类型做处理：
   - 调用 finalizeInitialChildren 设置属性
     - 设置样式
     - 将文本转换为 DOM 节点（这样就不需要在 beginWork 阶段将文本节点转换为 Fiber 了）
+      > 文本节点分两种情况：
+      >
+      > 第一种：button 按钮里面只有文本的，这种可以直接处理为 DOM 节点
+      >
+      > ```html
+      > <div>
+      >   <button>按钮</button>
+      > </div>
+      > ```
+      >
+      > 
+      >
+      > 第二种：这种，在 div 标签内，除了文本节点，还有 button，这种文本节点会被处理成 Fiber 节点，button 里面的文本节点当 DOM 处理
+      >
+      > ```html
+      > <div>
+      >   <button>按钮</button>\
+      >   文本啦啦啦
+      > </div>
+      > ```
     - 设置其它属性（例如 img 标签的 alt 等，这里不会包含 key 和 ref，因为在创建虚拟 DOM 就不会将它们放进 props）
     
   - 调用 bubbleProperties 将子节点的操作合并记录到 subtreeFlags 属性
