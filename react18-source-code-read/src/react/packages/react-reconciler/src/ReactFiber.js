@@ -238,6 +238,7 @@ function createFiber(
   return new FiberNode(tag, pendingProps, key, mode);
 }
 
+// ! 判断是否是类组件
 function shouldConstruct(Component: Function) {
   const prototype = Component.prototype;
   return !!(prototype && prototype.isReactComponent);
@@ -499,8 +500,11 @@ export function createFiberFromTypeAndProps(
   let fiberTag = IndeterminateComponent;
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
   let resolvedType = type;
+
+  // ! 根据不同类型，创建 Fiber 独有的属性
   if (typeof type === 'function') {
     if (shouldConstruct(type)) {
+      // ! 标识为 类组件
       fiberTag = ClassComponent;
       if (__DEV__) {
         resolvedType = resolveClassForHotReloading(resolvedType);
@@ -647,6 +651,7 @@ export function createFiberFromTypeAndProps(
     }
   }
 
+  // ! 创建 Fiber 节点
   const fiber = createFiber(fiberTag, pendingProps, key, mode);
   fiber.elementType = type;
   fiber.type = resolvedType;
@@ -671,6 +676,7 @@ export function createFiberFromElement(
   const type = element.type;
   const key = element.key;
   const pendingProps = element.props;
+  // ! 根据属性创建 Fiber
   const fiber = createFiberFromTypeAndProps(
     type,
     key,
@@ -843,6 +849,7 @@ export function createFiberFromTracingMarker(
   return fiber;
 }
 
+// ! 创建文本 Fiber
 export function createFiberFromText(
   content: string,
   mode: TypeOfMode,
