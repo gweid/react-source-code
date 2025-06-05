@@ -125,6 +125,11 @@ react18-source-code-read/
 
 
 
+## 虚拟 DOM
+
+通过 jsxDEV 函数创建虚拟 DOM
+
+
 ## 初始化渲染
 
 

@@ -261,6 +261,7 @@ export function jsx(type, config, maybeKey) {
 }
 
 /**
+ * 创建虚拟 DOM 元素
  * https://github.com/reactjs/rfcs/pull/107
  * @param {*} type
  * @param {object} props
@@ -288,6 +289,7 @@ export function jsxDEV(type, config, maybeKey, source, self) {
       if (__DEV__) {
         checkKeyStringCoercion(maybeKey);
       }
+      // ! 转字符串
       key = '' + maybeKey;
     }
 
@@ -312,6 +314,7 @@ export function jsxDEV(type, config, maybeKey, source, self) {
         // TODO: `ref` will no longer be reserved in the next major
         propName !== 'ref'
       ) {
+        // ! ref 和 key 不放在 props 中
         props[propName] = config[propName];
       }
     }
