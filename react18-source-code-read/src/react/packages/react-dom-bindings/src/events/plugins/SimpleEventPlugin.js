@@ -190,7 +190,7 @@ function extractEvents(
       dispatchQueue.push({event, listeners});
     }
   } else {
-    // sy-
+    // #
     // Some events don't bubble in the browser.
     // In the past, React has always bubbled them, but this can be surprising.
     // We're going to try aligning closer to the browser behavior by not bubbling

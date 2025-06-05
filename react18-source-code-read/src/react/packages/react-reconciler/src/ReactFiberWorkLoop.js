@@ -698,7 +698,7 @@ function requestRetryLane(fiber: Fiber) {
 
 export function requestDeferredLane(): Lane {
   if (workInProgressDeferredLane === NoLane) {
-    // sy-
+    // #
     // If there are multiple useDeferredValue hooks in the same render, the
     // tasks that they spawn should all be batched together, so they should all
     // receive the same lane.
@@ -724,7 +724,7 @@ export function requestDeferredLane(): Lane {
       // should just reschedule using the same lane.
       workInProgressDeferredLane = OffscreenLane;
     } else {
-      // sy-
+      // #
       // Everything else is spawned as a transition.
       // 其他所有的都被生成为一个transition。
       workInProgressDeferredLane = claimNextTransitionLane();
@@ -754,7 +754,7 @@ export function scheduleUpdateOnFiber(
   lane: Lane,
 ) {
 
-  console.log('%c [ scheduleUpdateOnFiber ]-746', 'font-size:13px; background:#d711ea; color:#000;', ) // sy-log
+  console.log('%c [ scheduleUpdateOnFiber ]-746', 'font-size:13px; background:#d711ea; color:#000;', ) // #log
   if (__DEV__) {
     if (isRunningInsertionEffect) {
       console.error('useInsertionEffect must not schedule updates.');
@@ -2024,7 +2024,7 @@ export function renderHasNotSuspendedYet(): boolean {
 // and more similar. Not sure it makes sense to maintain forked paths. Consider
 // unifying them again.
 function renderRootSync(root: FiberRoot, lanes: Lanes) {
-  console.log('%c [ render-renderRootSync ] - 100', 'font-size:13px; background:red; color:#000;', ) // sy-log
+  console.log('%c [ render-renderRootSync ] - 100', 'font-size:13px; background:red; color:#000;', ) // #log
   const prevExecutionContext = executionContext;
   // ! 1. 记录 render阶段 开始
   executionContext |= RenderContext;

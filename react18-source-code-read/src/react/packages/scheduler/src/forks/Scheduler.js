@@ -217,6 +217,7 @@ function workLoop(initialTime: number) {
     const callback = currentTask.callback;
     if (typeof callback === 'function') {
       // $FlowFixMe[incompatible-use] found when upgrading Flow
+      // ! 执行 callback 之前，将 currentTask.callback 设置为 null
       currentTask.callback = null;
       // $FlowFixMe[incompatible-use] found when upgrading Flow
       currentPriorityLevel = currentTask.priorityLevel;
@@ -232,6 +233,9 @@ function workLoop(initialTime: number) {
         // If a continuation is returned, immediately yield to the main thread
         // regardless of how much time is left in the current time slice.
         // $FlowFixMe[incompatible-use] found when upgrading Flow
+
+        //  执行 callback 如果有返回参数，并且返回参数是函数，说明还有新任务
+        // ! 将新任务保存到 currentTask.callback 中
         currentTask.callback = continuationCallback;
         if (enableProfiling) {
           // $FlowFixMe[incompatible-call] found when upgrading Flow
@@ -246,24 +250,31 @@ function workLoop(initialTime: number) {
           // $FlowFixMe[incompatible-use] found when upgrading Flow
           currentTask.isQueued = false;
         }
+
+        // ! 如果上面执行 callback 没有返回，那么 currentTask 与 peek(taskQueue) 相等
+        // ! 如果有返回，那么会将返回存储到 currentTask.callback 中，那么这里就会不相等
         if (currentTask === peek(taskQueue)) {
           pop(taskQueue);
         }
         advanceTimers(currentTime);
       }
     } else {
+      // ! 如果取消了任务，会将 callback 设置为 null，会走到这里
+      // ! 如果任务执行过了，也会将 callback 设置为 null，会走到这里
       pop(taskQueue);
     }
     currentTask = peek(taskQueue);
   }
   // Return whether there's additional work
   if (currentTask !== null) {
+    // ! 如果还有任务，返回 true
     return true;
   } else {
     const firstTimer = peek(timerQueue);
     if (firstTimer !== null) {
       requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
     }
+    // ! 如果任务执行完了，返回 false
     return false;
   }
 }

@@ -199,8 +199,8 @@ function flushSyncWorkAcrossRoots_impl(onlyLegacy: boolean) {
         );
 
         if (includesSyncLane(nextLanes)) {
-          // sy- setState count
-          // sy-no 初次渲染 onClick
+          // # setState count
+          // #no 初次渲染 onClick
           // This root has pending sync work. Flush it now.
           try {
             didPerformSomeWork = true;
@@ -379,8 +379,8 @@ function scheduleTaskForRootDuringMicrotask(
 
   // Schedule a new callback in the host environment.
   if (includesSyncLane(nextLanes)) {
-    // sy- setState
-    // sy-no 初次渲染
+    // # setState
+    // #no 初次渲染
     // Synchronous work is always flushed at the end of the microtask, so we
     // don't need to schedule an additional task.
     // 同步工作始终在微任务结束时刷新，因此我们不需要安排额外的任务。
@@ -510,7 +510,7 @@ function scheduleImmediateTask(cb: () => mixed) {
   // TODO: Can we land supportsMicrotasks? Which environments don't support it?
   // Alternatively, can we move this check to the host config?
   if (supportsMicrotasks) {
-    // sy-
+    // #
     scheduleMicrotask(() => {
       // In Safari, appending an iframe forces microtasks to run.
        // 在Safari中，附加一个iframe会强制微任务运行。
@@ -520,7 +520,7 @@ function scheduleImmediateTask(cb: () => mixed) {
       // 在渲染或提交过程中我们不支持运行回调函数，因此我们需要进行检查。
       const executionContext = getExecutionContext();
       if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
-        // sy-no
+        // #no
         // Note that this would still prematurely flush the callbacks
         // if this happens outside render or commit phase (e.g. in an event).
         // 如果这种情况发生在render或commit阶段之外（例如在事件中），这仍然会过早地刷新回调函数。

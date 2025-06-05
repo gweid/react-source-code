@@ -155,7 +155,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
   if (enableUnifiedSyncLane) {
     const pendingSyncLanes = lanes & SyncUpdateLanes;
     if (pendingSyncLanes !== 0) {
-      // sy-
+      // #
       // 页面初次渲染（lanes32）、更新（lanes2）
       // 将DefaultLane、SyncLane和ContinuousLane统一为SyncLane，并在根上使用一个单独的字段来跟踪它们应该使用queueMicrotask、requestAnimationFrame还是完全同步（在flushSync的情况下）进行调度。
       // https://github.com/facebook/react/pull/25524
@@ -163,7 +163,7 @@ function getHighestPriorityLanes(lanes: Lanes | Lane): Lanes {
     }
   }
 
-  // sy-
+  // #
   // 更新，如128
   switch (getHighestPriorityLane(lanes)) {
     case SyncHydrationLane:
@@ -471,7 +471,7 @@ export function markStarvedLanesAsExpired(
 
     const expirationTime = expirationTimes[index];
     if (expirationTime === NoTimestamp) {
-      // sy- console.log('%c [  ]-1469', 'font-size:13px; background:pink; color:#bf2c9f;', lane)
+      // # console.log('%c [  ]-1469', 'font-size:13px; background:pink; color:#bf2c9f;', lane)
       // Found a pending lane with no expiration time. If it's not suspended, or
       // if it's pinged, assume it's CPU-bound. Compute a new expiration time
       // using the current time.
@@ -483,7 +483,7 @@ export function markStarvedLanesAsExpired(
         (lane & suspendedLanes) === NoLanes ||
         (lane & pingedLanes) !== NoLanes
       ) {
-        // sy- console.log('%c [ 饿死 ]-482', 'font-size:13px; background:pink; color:#bf2c9f;', lane)
+        // # console.log('%c [ 饿死 ]-482', 'font-size:13px; background:pink; color:#bf2c9f;', lane)
         // Assumes timestamps are monotonically increasing.
         // 假设timestamps(时间戳)是单调递增的
         expirationTimes[index] = computeExpirationTime(lane, currentTime);
@@ -1031,7 +1031,7 @@ export function getTransitionsForLanes(
   lanes: Lane | Lanes,
 ): Array<Transition> | null {
   if (!enableTransitionTracing) {
-    // sy-
+    // #
     return null;
   }
 

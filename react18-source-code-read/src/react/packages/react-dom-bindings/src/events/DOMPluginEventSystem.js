@@ -741,7 +741,7 @@ export function accumulateSinglePhaseListeners(
 
       // createEventHandle listeners
       if (enableCreateEventHandleAPI) {
-        // sy-no
+        // #no
         const eventHandlerListeners =
           getEventHandlerListeners(lastHostComponent);
         if (eventHandlerListeners !== null) {

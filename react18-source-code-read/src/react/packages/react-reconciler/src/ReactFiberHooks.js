@@ -669,7 +669,7 @@ function finishRenderingHooks<Props, SecondArg>(
     );
   }
   if (enableLazyContextPropagation) {
-    // sy-no
+    // #no
     if (current !== null) {
       if (!checkIfWorkInProgressReceivedUpdate()) {
         // If there were no changes to props or state, we need to check if there
