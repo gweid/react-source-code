@@ -346,6 +346,8 @@ function unstable_scheduleCallback(
   var currentTime = getCurrentTime(); // performance.now()
 
   var startTime; // 任务开始时间，不是执行时间
+
+  // ? 其实源码在使用 unstable_scheduleCallback 函数的时候，貌似都没有传入 delay 参数
   if (typeof options === 'object' && options !== null) {
     var delay = options.delay;
     if (typeof delay === 'number' && delay > 0) {
@@ -401,8 +403,12 @@ function unstable_scheduleCallback(
 
   if (startTime > currentTime) {
     // 有delay的任务
+    // ? 其实源码在使用 unstable_scheduleCallback 函数的时候，貌似都没有传入 delay 参数
+    // ? 猜测：React 已经有了完善的优先级机制（Lane模型），可以更精确地控制任务的执行顺序，并且 React 的更新通常需要尽快响应，而不是延迟执行
+
     newTask.sortIndex = startTime; // sortIndex是把任务从timerQueue中取出来放到taskQueue中的依据
     push(timerQueue, newTask); // 暂时存到timerQueue，等晚点到了执行时间，再放到taskQueue，再执行任务
+
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
       // All tasks are delayed, and this is the task with the earliest delay.
       // 所有任务都延迟了，而这是延迟时间最短的任务。
@@ -419,8 +425,12 @@ function unstable_scheduleCallback(
     }
   } else {
     // 没有delay的任务
+
     newTask.sortIndex = expirationTime;
+
+    // ! 将任务存进最小堆
     push(taskQueue, newTask);
+
     if (enableProfiling) {
       markTaskStart(newTask, currentTime);
       newTask.isQueued = true;
@@ -465,6 +475,7 @@ function unstable_cancelCallback(task: Task) {
   // Null out the callback to indicate the task has been canceled. (Can't
   // remove from the queue because you can't remove arbitrary nodes from an
   // array based heap, only the first one.)
+  // ! 取消任务，就是把任务的callback设置为null
   task.callback = null;
 }
 

@@ -125,6 +125,16 @@ export const scheduleCallback = (priorityLevel, callback) => {
 }
 
 /**
+ * 取消任务
+ * @param {*} task 任务
+ */
+const cancelCallback = (task) => {
+  // 取消任务，把任务的 callback 设置为 null
+  // 在 workLoop 中，会判断当前任务的 callback，如果不是函数，则从堆顶移除
+  task.callback = null
+}
+
+/**
  * 获取当前时间
  * @returns 当前时间
  */
@@ -244,6 +254,7 @@ function performWorkUntilDeadline() {
     let hasMoreWork = true
 
     try {
+      // scheduleHostCallback 就是在 requestHostCallback 中赋值的 workLoop 函数
       hasMoreWork = scheduleHostCallback(startTime)
     } finally {
       // 如果还有工作，继续通过 schedulePerformWorkUntilDeadline 调度执行
@@ -258,6 +269,7 @@ function performWorkUntilDeadline() {
 
 export {
   scheduleCallback as unstable_scheduleCallback,
+  cancelCallback as unstable_cancelCallback,
   shouldYieldToHost as unstable_shouldYield,
   ImmediatePriority as unstable_ImmediatePriority,
   UserBlockingPriority as unstable_UserBlockingPriority,
