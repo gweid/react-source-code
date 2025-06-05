@@ -141,38 +141,40 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // Instance
-  this.tag = tag;
-  this.key = key;
+  this.tag = tag; // ! 组件类型，用来快速判断当前 Fiber 类型，与下面 type 作用不同
+  this.key = key; // ! 唯一标识
   this.elementType = null;
-  this.type = null;
-  this.stateNode = null;
+  this.type = null; // ! 组件类型。原生标签：字符串；类组件：类；函数组件：函数
+  this.stateNode = null; // ! 如果组件是标签：真实 DOM 节点；如果组件的类组件：类组件实例；如果组件是函数组件：null
 
   // Fiber
-  this.return = null;
-  this.child = null;
-  this.sibling = null;
-  this.index = 0;
+  // ! 这里形成 Fiber 单链表结构
+  this.return = null; // ! 父级 Fiber 节点
+  this.child = null; // ! 第一个子 Fiber 节点
+  this.sibling = null; // ! 下一个兄弟 Fiber 节点
+  this.index = 0; // ! 记录了节点在当前层级的位置索引，用于 diff 的时候判断节点是否需要移动
 
   this.ref = null;
   this.refCleanup = null;
 
-  this.pendingProps = pendingProps;
-  this.memoizedProps = null;
-  this.updateQueue = null;
-  this.memoizedState = null;
-  this.dependencies = null;
+  this.pendingProps = pendingProps; // ! 新的 props
+  this.memoizedProps = null; // ! 上一次的 props（当前页面上显示的 props）
+  this.updateQueue = null; // ! 更新队列
+  this.memoizedState = null; // ! 上一次的 state
+  this.dependencies = null; // ! 依赖，比如 context
 
   this.mode = mode;
 
   // Effects
+  // ! 副作用标识
   this.flags = NoFlags;
   this.subtreeFlags = NoFlags;
-  this.deletions = null;
+  this.deletions = null; // ! 需要删除的子节点
 
-  this.lanes = NoLanes;
+  this.lanes = NoLanes; // ! 优先级
   this.childLanes = NoLanes;
 
-  this.alternate = null;
+  this.alternate = null; // ! 用于存储更新前的 Fiber
 
   if (enableProfilerTimer) {
     // Note: The following is done to avoid a v8 performance cliff.
