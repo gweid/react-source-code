@@ -17,7 +17,7 @@
 
 ## 源码阅读篇
 
-[react 源码阅读](./react18-source-code-read/README.md)
+[react 源码阅读](./react-debug/README.md)
 
 
 
@@ -89,7 +89,7 @@
 
 #### 实现 react18 核心代码
 
-[实现 react 18 版本核心代码](./react18-core/README.md)，包括：
+[实现 react 18 版本核心代码](./simple-react18/README.md)，包括：
 
 - 初始渲染
   - jsxDEV
