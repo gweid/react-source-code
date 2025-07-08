@@ -17,7 +17,7 @@
 
 ## 源码阅读篇
 
-[react 源码阅读](./react-debug/README.md)
+[react 源码阅读](./react-source-debug/README.md)
 
 
 
